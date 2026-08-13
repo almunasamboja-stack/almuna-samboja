@@ -1,0 +1,108 @@
+// Prisma schema - Sistem Manajemen Kursus & Absensi Almuna Samboja
+// Dokumentasi: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Gunakan "sqlite" untuk development. Untuk production, ganti ke "postgresql"
+  // dan sesuaikan DATABASE_URL di file .env
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Catatan: SQLite tidak mendukung tipe `enum` di Prisma, jadi nilai-nilai berikut
+// disimpan sebagai String dan divalidasi manual di controller.
+// Role              : "ADMIN" | "TEACHER" | "STUDENT"
+// Student.status    : "PENDING" | "APPROVED" | "REJECTED"
+// AttendanceStatus  : "PRESENT" | "SICK" | "ALPHA"
+// GradeType         : "DAILY" | "MONTHLY"
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("STUDENT")
+  avatarUrl    String?  // foto profil - berlaku untuk semua role (admin, guru, siswa)
+  createdAt    DateTime @default(now())
+
+  // Relasi One-to-One ke Student (hanya terisi jika role = STUDENT)
+  student      Student?
+
+  @@map("users")
+}
+
+model Student {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  courseId    Int?
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  address     String
+  parentPhone String   // nomor WA orang tua untuk notifikasi
+
+  // Status persetujuan pendaftaran oleh admin
+  status      String   @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+
+  attendances Attendance[]
+  grades      Grade[]
+
+  createdAt   DateTime @default(now())
+
+  @@map("students")
+}
+
+model Course {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  description          String
+  category             String    @default("Umum") // untuk pengelompokan tab di halaman admin
+  fee                  Int       // biaya dalam Rupiah
+  schedule             String    // contoh: "Senin - Jumat, 15.30 - 17.00"
+  quota                Int?      // kuota peserta
+  registrationDeadline DateTime? // tenggat pendaftaran
+  createdAt            DateTime  @default(now())
+
+  students             Student[]
+
+  @@map("courses")
+}
+
+model GalleryPhoto {
+  id        Int      @id @default(autoincrement())
+  imageUrl  String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  @@map("gallery_photos")
+}
+
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  date      DateTime @default(now())
+  status    String   // "PRESENT" | "SICK" | "ALPHA"
+  notified  Boolean  @default(false) // apakah notifikasi WA berhasil dikirim
+  timestamp DateTime @default(now())
+
+  @@map("attendances")
+}
+
+model Grade {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  subject   String
+  type      String   // "DAILY" | "MONTHLY"
+  score     Float
+  date      DateTime @default(now())
+
+  @@map("grades")
+}
