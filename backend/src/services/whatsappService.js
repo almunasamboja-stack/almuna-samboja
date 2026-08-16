@@ -1,22 +1,6 @@
 /**
  * Service untuk mengirim notifikasi WhatsApp ke orang tua/wali murid.
- *
- * SAAT INI: hanya simulasi (console.log) agar bisa langsung dicoba tanpa API key.
- * UNTUK PRODUCTION: ganti isi fungsi sendAttendanceNotification dengan pemanggilan
- * API WhatsApp Gateway sungguhan, misalnya Fonnte (https://fonnte.com) atau WAPi.
- *
- * Contoh implementasi nyata dengan Fonnte (uncomment & sesuaikan saat siap production):
- *
- * const axios = require('axios');
- * async function sendAttendanceNotification(parentPhone, studentName, status) {
- *   const message = buildMessage(studentName, status);
- *   const response = await axios.post(
- *     process.env.WHATSAPP_API_URL,
- *     { target: parentPhone, message },
- *     { headers: { Authorization: process.env.WHATSAPP_API_KEY } }
- *   );
- *   return response.data;
- * }
+ * Terhubung ke Fonnte (https://fonnte.com) - WhatsApp Gateway.
  */
 
 const STATUS_LABEL = {
@@ -37,7 +21,7 @@ function buildMessage(studentName, status, date) {
 }
 
 /**
- * Kirim notifikasi absensi ke nomor orang tua.
+ * Kirim notifikasi absensi ke nomor orang tua via Fonnte.
  * @param {string} parentPhone - nomor HP/WA orang tua, contoh "0812xxxxxxx"
  * @param {string} studentName - nama siswa
  * @param {'PRESENT'|'SICK'|'ALPHA'} status - status kehadiran
@@ -47,18 +31,38 @@ function buildMessage(studentName, status, date) {
 async function sendAttendanceNotification(parentPhone, studentName, status, date = new Date()) {
   const message = buildMessage(studentName, status, date);
 
-  // ---- SIMULASI: ganti blok ini dengan pemanggilan API WA asli saat production ----
-  console.log(
-    `[NOTIF] Mengirim WA ke ${parentPhone}: Siswa ${studentName} telah ${STATUS_LABEL[status]} pada ${new Date(
-      date
-    ).toLocaleDateString('id-ID')}`
-  );
-  // ----------------------------------------------------------------------------------
+  // Kalau API key belum diisi di .env, tetap simulasi via console.log
+  // supaya tidak error saat development.
+  if (!process.env.WHATSAPP_API_KEY) {
+    console.log(
+      `[NOTIF-SIMULASI] Mengirim WA ke ${parentPhone}: Siswa ${studentName} telah ${STATUS_LABEL[status]} pada ${new Date(
+        date
+      ).toLocaleDateString('id-ID')}`
+    );
+    return { success: true, message };
+  }
 
-  // Simulasikan latensi jaringan singkat
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  try {
+    const body = new URLSearchParams();
+    body.append('target', parentPhone);
+    body.append('message', message);
 
-  return { success: true, message };
+    const response = await fetch(process.env.WHATSAPP_API_URL || 'https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: {
+        Authorization: process.env.WHATSAPP_API_KEY,
+      },
+      body,
+    });
+
+    const data = await response.json();
+    console.log(`[NOTIF] Respons Fonnte untuk ${parentPhone}:`, data);
+
+    return { success: data.status !== false, message };
+  } catch (err) {
+    console.error(`[NOTIF] Gagal mengirim WA ke ${parentPhone}:`, err.message);
+    return { success: false, message: err.message };
+  }
 }
 
 module.exports = { sendAttendanceNotification };

@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("postgresql://neondb_owner:npg_Cz2EaSfJGr4N@ep-wispy-band-azmnrwlo.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require")
+ url = env("DATABASE_URL")
 }
 
 // Catatan: SQLite tidak mendukung tipe `enum` di Prisma, jadi nilai-nilai berikut
