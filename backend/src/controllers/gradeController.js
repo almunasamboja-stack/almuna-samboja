@@ -38,11 +38,11 @@ async function getClassDailyGrades(req, res) {
     const students = await prisma.student.findMany({
       where: {
         status: 'APPROVED',
-        ...(courseId ? { courseId: Number(courseId) } : {}),
+        ...(courseId ? { enrollments: { some: { courseId: Number(courseId) } } } : {}),
       },
       include: {
         user: { select: { name: true, avatarUrl: true } },
-        course: { select: { name: true } },
+        enrollments: { include: { course: { select: { name: true } } } },
         grades: {
           where: { type: 'DAILY', date: { gte: startOfDay, lte: endOfDay } },
           orderBy: { id: 'asc' },
@@ -55,7 +55,7 @@ async function getClassDailyGrades(req, res) {
       studentId: s.id,
       name: s.user.name,
       avatarUrl: s.user.avatarUrl,
-      class: s.course?.name || 'Belum ada kelas',
+      class: s.enrollments.length > 0 ? s.enrollments.map((e) => e.course.name).join(', ') : 'Belum ada kelas',
       todayGrades: s.grades.map((g) => ({ id: g.id, subject: g.subject, score: g.score })),
     }));
 

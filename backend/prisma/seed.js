@@ -43,6 +43,13 @@ function randomFrom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// Pilih 1 atau 2 kursus acak (unik) untuk simulasikan siswa yang ambil lebih dari 1 pelajaran
+function pickRandomCourses(arr) {
+  const count = Math.random() > 0.5 ? 2 : 1;
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
 async function main() {
   console.log('🌱 Mulai seeding...');
 
@@ -111,10 +118,12 @@ async function main() {
         avatarUrl: `https://i.pravatar.cc/150?img=${i + 1}`,
         student: {
           create: {
-            courseId: randomFrom(createdCourses).id,
             address: `Jl. Contoh No. ${i + 1}, Samboja, Kalimantan Timur`,
             parentPhone: randomPhone(),
             status: 'APPROVED',
+            enrollments: {
+              create: pickRandomCourses(createdCourses).map((c) => ({ courseId: c.id })),
+            },
           },
         },
       },
@@ -181,10 +190,12 @@ async function main() {
         avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
         student: {
           create: {
-            courseId: randomFrom(createdCourses).id,
             address: `Jl. Pendaftar No. ${i + 1}, Samboja`,
             parentPhone: randomPhone(),
             status: 'PENDING',
+            enrollments: {
+              create: pickRandomCourses(createdCourses).map((c) => ({ courseId: c.id })),
+            },
           },
         },
       },

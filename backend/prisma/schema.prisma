@@ -7,11 +7,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
- url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
-// Catatan: SQLite tidak mendukung tipe `enum` di Prisma, jadi nilai-nilai berikut
-// disimpan sebagai String dan divalidasi manual di controller.
+// Catatan: nilai-nilai berikut disimpan sebagai String dan divalidasi manual di controller.
 // Role              : "ADMIN" | "TEACHER" | "STUDENT"
 // Student.status    : "PENDING" | "APPROVED" | "REJECTED"
 // AttendanceStatus  : "PRESENT" | "SICK" | "ALPHA"
@@ -37,14 +36,14 @@ model Student {
   userId      Int      @unique
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  courseId    Int?
-  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
-
   address     String
   parentPhone String   // nomor WA orang tua untuk notifikasi
 
   // Status persetujuan pendaftaran oleh admin
   status      String   @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+
+  // Satu siswa bisa terdaftar di banyak kelas kursus (many-to-many lewat Enrollment)
+  enrollments Enrollment[]
 
   attendances Attendance[]
   grades      Grade[]
@@ -65,9 +64,22 @@ model Course {
   registrationDeadline DateTime? // tenggat pendaftaran
   createdAt            DateTime  @default(now())
 
-  students             Student[]
+  enrollments          Enrollment[]
 
   @@map("courses")
+}
+
+// Tabel penghubung: 1 siswa bisa ikut banyak kelas, 1 kelas bisa punya banyak siswa
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  Int
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, courseId]) // cegah siswa terdaftar dobel di kelas yang sama
+  @@map("enrollments")
 }
 
 model GalleryPhoto {

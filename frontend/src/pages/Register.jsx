@@ -12,7 +12,7 @@ export default function Register() {
     email: '',
     password: '',
     role: 'STUDENT',
-    courseId: '',
+    courseIds: [],
     address: '',
     parentPhone: '',
   });
@@ -36,6 +36,16 @@ export default function Register() {
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function toggleCourse(courseId) {
+    setForm((f) => {
+      const already = f.courseIds.includes(courseId);
+      return {
+        ...f,
+        courseIds: already ? f.courseIds.filter((id) => id !== courseId) : [...f.courseIds, courseId],
+      };
+    });
   }
 
   async function handleSubmit(e) {
@@ -143,24 +153,33 @@ export default function Register() {
             {form.role === 'STUDENT' && (
               <>
                 <div>
-                  <label className="text-sm font-medium text-slate-700 block mb-1">Pilih Kelas Kursus</label>
-                  <select
-                    required
-                    className="input-field"
-                    value={form.courseId}
-                    onChange={(e) => update('courseId', e.target.value)}
-                  >
-                    <option value="">-- Pilih kelas --</option>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">
+                    Pilih Kelas Kursus <span className="text-slate-400 font-normal">(boleh lebih dari satu)</span>
+                  </label>
+                  <div className="border border-slate-300 rounded-lg max-h-56 overflow-y-auto p-3 space-y-3">
                     {Object.entries(grouped).map(([category, list]) => (
-                      <optgroup key={category} label={category}>
-                        {list.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </optgroup>
+                      <div key={category}>
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">{category}</p>
+                        <div className="space-y-1.5">
+                          {list.map((c) => (
+                            <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={form.courseIds.includes(c.id)}
+                                onChange={() => toggleCourse(c.id)}
+                                className="rounded border-slate-300 text-gold focus:ring-gold"
+                              />
+                              {c.name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
                     ))}
-                  </select>
+                    {courses.length === 0 && <p className="text-xs text-slate-400">Memuat daftar kelas...</p>}
+                  </div>
+                  {form.courseIds.length === 0 && (
+                    <p className="text-xs text-maroon mt-1">Pilih minimal 1 kelas.</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-1">Alamat</label>
@@ -186,7 +205,11 @@ export default function Register() {
               </>
             )}
 
-            <button type="submit" disabled={loading} className="btn-primary w-full">
+            <button
+              type="submit"
+              disabled={loading || (form.role === 'STUDENT' && form.courseIds.length === 0)}
+              className="btn-primary w-full"
+            >
               {loading ? 'Memproses...' : 'Daftar'}
             </button>
           </form>

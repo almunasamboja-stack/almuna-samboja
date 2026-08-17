@@ -13,7 +13,7 @@ function signToken(user) {
 
 async function register(req, res) {
   try {
-    const { name, email, password, role, courseId, address, parentPhone } = req.body;
+    const { name, email, password, role, courseIds, address, parentPhone } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Nama, email, dan password wajib diisi' });
@@ -26,6 +26,11 @@ async function register(req, res) {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const finalRole = role === 'TEACHER' || role === 'ADMIN' ? role : 'STUDENT';
+
+    // courseIds bisa berupa array angka, atau array string dari form - normalisasi jadi array angka unik
+    const normalizedCourseIds = Array.isArray(courseIds)
+      ? [...new Set(courseIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id)))]
+      : [];
 
     const user = await prisma.user.create({
       data: {
@@ -40,10 +45,12 @@ async function register(req, res) {
           finalRole === 'STUDENT'
             ? {
                 create: {
-                  courseId: courseId ? Number(courseId) : undefined,
                   address: address || '-',
                   parentPhone: parentPhone || '-',
                   status: 'PENDING',
+                  enrollments: {
+                    create: normalizedCourseIds.map((courseId) => ({ courseId })),
+                  },
                 },
               }
             : undefined,

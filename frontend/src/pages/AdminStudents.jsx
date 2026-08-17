@@ -5,7 +5,7 @@ import AvatarManager from '../components/AvatarManager';
 import api from '../api/axios';
 import { resolveImageUrl } from '../utils/media';
 
-const EMPTY_FORM = { name: '', email: '', password: '', courseId: '', address: '', parentPhone: '' };
+const EMPTY_FORM = { name: '', email: '', password: '', courseIds: [], address: '', parentPhone: '' };
 
 const STATUS_TABS = [
   { key: 'ALL', label: 'Semua' },
@@ -20,6 +20,11 @@ const STATUS_BADGE = {
   REJECTED: 'bg-red-100 text-maroon',
 };
 const STATUS_LABEL = { PENDING: 'Menunggu', APPROVED: 'Disetujui', REJECTED: 'Ditolak' };
+
+function courseNames(student) {
+  if (!student.enrollments || student.enrollments.length === 0) return '-';
+  return student.enrollments.map((e) => e.course.name).join(', ');
+}
 
 export default function AdminStudents() {
   const [students, setStudents] = useState([]);
@@ -78,7 +83,7 @@ export default function AdminStudents() {
       name: student.user.name,
       email: student.user.email,
       password: '',
-      courseId: student.course?.id || '',
+      courseIds: (student.enrollments || []).map((e) => e.course.id),
       address: student.address,
       parentPhone: student.parentPhone,
     });
@@ -91,6 +96,16 @@ export default function AdminStudents() {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  function toggleCourse(courseId) {
+    setForm((f) => {
+      const already = f.courseIds.includes(courseId);
+      return {
+        ...f,
+        courseIds: already ? f.courseIds.filter((id) => id !== courseId) : [...f.courseIds, courseId],
+      };
+    });
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
@@ -99,14 +114,19 @@ export default function AdminStudents() {
       if (editingStudent) {
         await api.put(`/students/${editingStudent.id}`, {
           name: form.name,
-          courseId: form.courseId || null,
+          courseIds: form.courseIds,
           address: form.address,
           parentPhone: form.parentPhone,
         });
         showToast('Data siswa berhasil diperbarui.');
       } else {
         const fd = new FormData();
-        Object.entries(form).forEach(([k, v]) => fd.append(k, v));
+        fd.append('name', form.name);
+        fd.append('email', form.email);
+        fd.append('password', form.password);
+        fd.append('address', form.address);
+        fd.append('parentPhone', form.parentPhone);
+        form.courseIds.forEach((id) => fd.append('courseIds', id));
         if (avatarFile) fd.append('avatar', avatarFile);
         await api.post('/students', fd);
         showToast('Siswa baru berhasil ditambahkan.');
@@ -218,7 +238,7 @@ export default function AdminStudents() {
                       {s.user.name}
                     </td>
                     <td className="py-3 text-slate-500">{s.user.email}</td>
-                    <td className="py-3">{s.course?.name || '-'}</td>
+                    <td className="py-3 max-w-[220px]">{courseNames(s)}</td>
                     <td className="py-3">{s.parentPhone}</td>
                     <td className="py-3">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_BADGE[s.status]}`}>
@@ -330,17 +350,29 @@ export default function AdminStudents() {
               )}
 
               <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1">Kelas Kursus</label>
-                <select className="input-field" value={form.courseId} onChange={(e) => update('courseId', e.target.value)}>
-                  <option value="">-- Pilih kelas --</option>
+                <label className="text-sm font-medium text-slate-700 block mb-1">
+                  Kelas Kursus <span className="text-slate-400 font-normal">(boleh lebih dari satu)</span>
+                </label>
+                <div className="border border-slate-300 rounded-lg max-h-48 overflow-y-auto p-3 space-y-3">
                   {Object.entries(grouped).map(([category, list]) => (
-                    <optgroup key={category} label={category}>
-                      {list.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </optgroup>
+                    <div key={category}>
+                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">{category}</p>
+                      <div className="space-y-1.5">
+                        {list.map((c) => (
+                          <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={form.courseIds.includes(c.id)}
+                              onChange={() => toggleCourse(c.id)}
+                              className="rounded border-slate-300 text-gold focus:ring-gold"
+                            />
+                            {c.name}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
-                </select>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1">Alamat</label>

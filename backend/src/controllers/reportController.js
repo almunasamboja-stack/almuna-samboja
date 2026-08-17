@@ -10,11 +10,11 @@ async function getClassRecap(req, res) {
     const students = await prisma.student.findMany({
       where: {
         status: 'APPROVED',
-        ...(courseId ? { courseId: Number(courseId) } : {}),
+        ...(courseId ? { enrollments: { some: { courseId: Number(courseId) } } } : {}),
       },
       include: {
         user: { select: { name: true, email: true } },
-        course: { select: { id: true, name: true, category: true } },
+        enrollments: { include: { course: { select: { id: true, name: true, category: true } } } },
         attendances: { select: { status: true } },
         grades: { select: { type: true, score: true } },
       },
@@ -43,9 +43,9 @@ async function getClassRecap(req, res) {
         studentId: s.id,
         name: s.user.name,
         email: s.user.email,
-        courseId: s.course?.id || null,
-        className: s.course?.name || 'Belum ada kelas',
-        category: s.course?.category || '-',
+        courseIds: s.enrollments.map((e) => e.course.id),
+        className: s.enrollments.length > 0 ? s.enrollments.map((e) => e.course.name).join(', ') : 'Belum ada kelas',
+        category: s.enrollments[0]?.course.category || '-',
         present,
         sick,
         alpha,

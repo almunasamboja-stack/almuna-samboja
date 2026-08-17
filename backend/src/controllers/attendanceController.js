@@ -16,11 +16,11 @@ async function getTodayAttendance(req, res) {
     const students = await prisma.student.findMany({
       where: {
         status: 'APPROVED', // hanya siswa yang sudah disetujui admin yang tampil di absensi
-        ...(courseId ? { courseId: Number(courseId) } : {}),
+        ...(courseId ? { enrollments: { some: { courseId: Number(courseId) } } } : {}),
       },
       include: {
         user: { select: { name: true, email: true, avatarUrl: true } },
-        course: { select: { id: true, name: true } },
+        enrollments: { include: { course: { select: { id: true, name: true } } } },
         attendances: {
           where: { date: { gte: startOfDay, lte: endOfDay } },
           take: 1,
@@ -32,8 +32,8 @@ async function getTodayAttendance(req, res) {
     const result = students.map((s) => ({
       studentId: s.id,
       name: s.user.name,
-      class: s.course?.name || 'Belum ada kelas',
-      courseId: s.course?.id || null,
+      class: s.enrollments.length > 0 ? s.enrollments.map((e) => e.course.name).join(', ') : 'Belum ada kelas',
+      courseIds: s.enrollments.map((e) => e.course.id),
       avatarUrl: s.user.avatarUrl,
       parentPhone: s.parentPhone,
       status: s.attendances[0]?.status || null, // null = belum diabsen

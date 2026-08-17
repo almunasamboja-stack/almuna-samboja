@@ -164,7 +164,22 @@ export default function StudentDashboard() {
                   <p className="text-slate-500 text-sm">{profile.user.email}</p>
                 </div>
                 <ul className="divide-y divide-slate-100 text-sm mb-5">
-                  <li className="py-3 flex justify-between"><span className="text-slate-500">Kelas Kursus</span><span className="font-medium text-navy text-right">{profile.course?.name || 'Belum ditentukan'}</span></li>
+                  <li className="py-3">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-slate-500">Kelas Kursus</span>
+                    </div>
+                    {profile.enrollments && profile.enrollments.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {profile.enrollments.map((e) => (
+                          <span key={e.course.id} className="text-xs font-medium bg-gold/10 text-navy px-2.5 py-1 rounded-full">
+                            {e.course.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="font-medium text-navy">Belum ditentukan</span>
+                    )}
+                  </li>
                   <li className="py-3 flex justify-between"><span className="text-slate-500">Alamat</span><span className="font-medium text-navy text-right">{profile.address}</span></li>
                   <li className="py-3 flex justify-between"><span className="text-slate-500">No. HP Orang Tua</span><span className="font-medium text-navy">{profile.parentPhone}</span></li>
                   <li className="py-3 flex justify-between"><span className="text-slate-500">Status Pendaftaran</span><span className="font-medium text-navy">{profile.status === 'APPROVED' ? 'Disetujui' : profile.status === 'PENDING' ? 'Menunggu' : 'Ditolak'}</span></li>

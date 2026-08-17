@@ -4,8 +4,17 @@ const prisma = require('../lib/prisma');
 
 const STUDENT_SELECT_INCLUDE = {
   user: { select: { id: true, name: true, email: true, avatarUrl: true } },
-  course: { select: { id: true, name: true, category: true } },
+  enrollments: {
+    include: { course: { select: { id: true, name: true, category: true } } },
+  },
 };
+
+// Ubah bentuk array req.body.courseIds (dari form multipart/JSON) jadi array angka unik
+function normalizeCourseIds(courseIds) {
+  if (courseIds === undefined || courseIds === null) return undefined;
+  const arr = Array.isArray(courseIds) ? courseIds : [courseIds];
+  return [...new Set(arr.map((id) => Number(id)).filter((id) => !Number.isNaN(id)))];
+}
 
 // GET /api/students/me -> profil siswa yang sedang login
 async function getMyProfile(req, res) {
@@ -76,10 +85,11 @@ async function getAllStudents(req, res) {
 
 // POST /api/students -> tambah siswa baru langsung oleh admin (khusus admin)
 // Siswa yang ditambahkan admin otomatis berstatus APPROVED.
-// body: { name, email, password, courseId, address, parentPhone }
+// body: { name, email, password, courseIds: [1,2,...], address, parentPhone }
 async function createStudent(req, res) {
   try {
-    const { name, email, password, courseId, address, parentPhone } = req.body;
+    const { name, email, password, address, parentPhone } = req.body;
+    const courseIds = normalizeCourseIds(req.body.courseIds) || [];
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Nama, email, dan password wajib diisi' });
@@ -104,10 +114,10 @@ async function createStudent(req, res) {
         avatarUrl,
         student: {
           create: {
-            courseId: courseId ? Number(courseId) : undefined,
             address: address || '-',
             parentPhone: parentPhone || '-',
             status: 'APPROVED',
+            enrollments: { create: courseIds.map((courseId) => ({ courseId })) },
           },
         },
       },
@@ -122,11 +132,12 @@ async function createStudent(req, res) {
 }
 
 // PUT /api/students/:id -> edit data siswa mana pun (khusus admin)
-// body: { name, courseId, address, parentPhone }
+// body: { name, courseIds: [1,2,...], address, parentPhone }
 async function updateStudent(req, res) {
   try {
     const { id } = req.params;
-    const { name, courseId, address, parentPhone } = req.body;
+    const { name, address, parentPhone } = req.body;
+    const courseIds = normalizeCourseIds(req.body.courseIds);
 
     const student = await prisma.student.findUnique({ where: { id: Number(id) } });
     if (!student) {
@@ -136,11 +147,21 @@ async function updateStudent(req, res) {
     await prisma.student.update({
       where: { id: Number(id) },
       data: {
-        courseId: courseId !== undefined ? (courseId ? Number(courseId) : null) : undefined,
         address: address ?? student.address,
         parentPhone: parentPhone ?? student.parentPhone,
       },
     });
+
+    // Kalau courseIds dikirim, ganti seluruh daftar kelas siswa ini (hapus lama, buat baru)
+    if (courseIds !== undefined) {
+      await prisma.enrollment.deleteMany({ where: { studentId: Number(id) } });
+      if (courseIds.length > 0) {
+        await prisma.enrollment.createMany({
+          data: courseIds.map((courseId) => ({ studentId: Number(id), courseId })),
+          skipDuplicates: true,
+        });
+      }
+    }
 
     if (name) {
       await prisma.user.update({ where: { id: student.userId }, data: { name } });
@@ -188,7 +209,7 @@ async function updateStudentStatus(req, res) {
 }
 
 // DELETE /api/students/:id -> hapus siswa (khusus admin)
-// Menghapus User terkait akan otomatis menghapus Student, Attendance, dan Grade (cascade)
+// Menghapus User terkait akan otomatis menghapus Student, Enrollment, Attendance, dan Grade (cascade)
 async function deleteStudent(req, res) {
   try {
     const { id } = req.params;
