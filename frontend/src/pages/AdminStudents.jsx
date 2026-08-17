@@ -1,5 +1,6 @@
 // Halaman admin: kelola data siswa (tambah, edit, hapus, setujui/tolak pendaftar, kelola foto)
 import { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import Navbar from '../components/Navbar';
 import AvatarManager from '../components/AvatarManager';
 import api from '../api/axios';
@@ -181,6 +182,28 @@ export default function AdminStudents() {
     showToast('Foto profil siswa berhasil dihapus.');
   }
 
+  function handleDownloadExcel() {
+    const rows = filteredStudents.map((s) => ({
+      Nama: s.user.name,
+      Email: s.user.email,
+      Kelas: courseNames(s),
+      'No. HP Orang Tua': s.parentPhone,
+      Alamat: s.address,
+      Status: STATUS_LABEL[s.status],
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 22 }, { wch: 26 }, { wch: 26 }, { wch: 16 }, { wch: 30 }, { wch: 12 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Siswa');
+
+    const labelStatus = STATUS_TABS.find((t) => t.key === statusFilter)?.label || 'Semua';
+    XLSX.writeFile(workbook, `Data-Siswa-${labelStatus}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -190,9 +213,14 @@ export default function AdminStudents() {
             <h1 className="text-2xl font-bold text-navy">Kelola Data Siswa</h1>
             <p className="text-slate-500 text-sm mt-1">Tambah, ubah, hapus, dan setujui pendaftaran siswa.</p>
           </div>
-          <button onClick={openAddModal} className="btn-primary">
-            + Tambah Siswa
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handleDownloadExcel} disabled={filteredStudents.length === 0} className="btn-outline disabled:opacity-50">
+              ⬇ Download Excel
+            </button>
+            <button onClick={openAddModal} className="btn-primary">
+              + Tambah Siswa
+            </button>
+          </div>
         </div>
 
         {/* FILTER STATUS */}

@@ -47,6 +47,7 @@ model Student {
 
   attendances Attendance[]
   grades      Grade[]
+  payments    Payment[]
 
   createdAt   DateTime @default(now())
 
@@ -65,6 +66,7 @@ model Course {
   createdAt            DateTime  @default(now())
 
   enrollments          Enrollment[]
+  payments             Payment[]
 
   @@map("courses")
 }
@@ -115,4 +117,23 @@ model Grade {
   date      DateTime @default(now())
 
   @@map("grades")
+}
+
+// Pembayaran SPP (biaya bulanan kursus) per siswa per kelas
+model Payment {
+  id          Int      @id @default(autoincrement())
+  studentId   Int
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId    Int?
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  amount      Int      // jumlah dibayar (Rupiah)
+  periodMonth Int      // bulan SPP yang dibayar, 1-12
+  periodYear  Int      // tahun SPP yang dibayar, contoh 2026
+  paymentDate DateTime @default(now()) // tanggal pembayaran dilakukan
+  method      String   // "CASH" | "TRANSFER"
+  notes       String?  // keterangan tambahan (opsional)
+  createdAt   DateTime @default(now())
+
+  @@map("payments")
 }

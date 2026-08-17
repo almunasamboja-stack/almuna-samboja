@@ -9,6 +9,7 @@ import AdminStudents from './pages/AdminStudents';
 import AdminCourses from './pages/AdminCourses';
 import AdminGallery from './pages/AdminGallery';
 import AdminReports from './pages/AdminReports';
+import AdminPayments from './pages/AdminPayments';
 import MyProfile from './pages/MyProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -87,6 +88,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminReports />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/payments"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminPayments />
           </ProtectedRoute>
         }
       />

@@ -92,6 +92,9 @@ export default function Navbar() {
                     <Link to="/admin/reports" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Rekap Kelas
                     </Link>
+                    <Link to="/admin/payments" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Pembayaran SPP
+                    </Link>
                     <Link to="/profile" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Profil Saya
                     </Link>

@@ -8,6 +8,10 @@ import api from '../api/axios';
 
 const STATUS_LABEL = { PRESENT: 'Hadir', SICK: 'Sakit', ALPHA: 'Alpha' };
 const STATUS_COLOR = { PRESENT: 'text-green-600', SICK: 'text-yellow-600', ALPHA: 'text-red-600' };
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
 
 const APPROVAL_BANNER = {
   PENDING: {
@@ -27,6 +31,7 @@ export default function StudentDashboard() {
   const [profile, setProfile] = useState(null);
   const [attendance, setAttendance] = useState(null);
   const [grades, setGrades] = useState(null);
+  const [payments, setPayments] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
@@ -45,12 +50,14 @@ export default function StudentDashboard() {
 
       if (profileData.student.status === 'APPROVED') {
         const studentId = profileData.student.id;
-        const [{ data: attData }, { data: gradeData }] = await Promise.all([
+        const [{ data: attData }, { data: gradeData }, { data: paymentData }] = await Promise.all([
           api.get(`/attendance/student/${studentId}`),
           api.get(`/grades/student/${studentId}`),
+          api.get(`/payments/student/${studentId}`),
         ]);
         setAttendance(attData);
         setGrades(gradeData);
+        setPayments(paymentData.payments);
       }
     } catch (err) {
       console.error(err);
@@ -138,6 +145,7 @@ export default function StudentDashboard() {
                 { key: 'profil', label: 'Profil Saya' },
                 { key: 'absensi', label: 'Rekap Absensi' },
                 { key: 'nilai', label: 'Nilai' },
+                { key: 'spp', label: 'Riwayat SPP' },
               ].map((t) => (
                 <button
                   key={t.key}
@@ -342,6 +350,46 @@ export default function StudentDashboard() {
                 </div>
               ) : (
                 <p className="text-slate-400 text-sm">Data nilai tersedia setelah akun disetujui admin.</p>
+              )
+            )}
+
+            {/* TAB 4: RIWAYAT SPP */}
+            {tab === 'spp' && (
+              payments ? (
+                <div className="card">
+                  <p className="font-semibold text-navy mb-4">Riwayat Pembayaran SPP</p>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-slate-400 border-b border-slate-100">
+                        <th className="pb-2 font-medium">Periode</th>
+                        <th className="pb-2 font-medium">Kelas</th>
+                        <th className="pb-2 font-medium text-right">Jumlah</th>
+                        <th className="pb-2 font-medium">Tanggal Bayar</th>
+                        <th className="pb-2 font-medium">Metode</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((p) => (
+                        <tr key={p.id} className="border-b border-slate-50 last:border-0">
+                          <td className="py-2.5">{MONTH_NAMES[p.periodMonth - 1]} {p.periodYear}</td>
+                          <td className="py-2.5">{p.course?.name || '-'}</td>
+                          <td className="py-2.5 text-right font-semibold text-navy">
+                            {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.amount)}
+                          </td>
+                          <td className="py-2.5">{new Date(p.paymentDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                          <td className="py-2.5">{p.method === 'CASH' ? 'Tunai' : 'Transfer'}</td>
+                        </tr>
+                      ))}
+                      {payments.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-slate-400">Belum ada riwayat pembayaran.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-slate-400 text-sm">Data pembayaran tersedia setelah akun disetujui admin.</p>
               )
             )}
           </>
