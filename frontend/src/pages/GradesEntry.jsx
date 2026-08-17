@@ -52,17 +52,19 @@ export default function GradesEntry() {
     setEditingGrade(grade);
   }
 
-  async function handleSubmitGrade({ subject, score, gradeId }) {
+  async function handleSubmitGrade({ subject, score, date, notes, gradeId }) {
     setSubmitting(true);
     try {
       if (gradeId) {
-        await api.put(`/grades/${gradeId}`, { subject, score });
+        await api.put(`/grades/${gradeId}`, { subject, score, date, notes });
         showToast('Nilai berhasil diperbarui.');
       } else {
         await api.post('/grades', {
           studentId: modalStudent.studentId,
           subject,
           score,
+          date,
+          notes,
           type: 'DAILY',
         });
         showToast('Nilai berhasil ditambahkan.');
@@ -167,7 +169,11 @@ export default function GradesEntry() {
                       key={g.id}
                       className="flex items-center gap-2 bg-gold/10 text-navy text-xs font-medium pl-3 pr-1.5 py-1.5 rounded-full"
                     >
-                      <button onClick={() => openEditModal(s, g)} className="hover:underline">
+                      <button
+                        onClick={() => openEditModal(s, g)}
+                        className="hover:underline"
+                        title={`${new Date(g.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}${g.notes ? ` · ${g.notes}` : ''}`}
+                      >
                         {g.subject}: {g.score}
                       </button>
                       {confirmDeleteId === g.id ? (

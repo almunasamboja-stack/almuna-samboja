@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import TeacherDashboard from './pages/TeacherDashboard';
 import GradesEntry from './pages/GradesEntry';
+import AttendanceRecap from './pages/AttendanceRecap';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminStudents from './pages/AdminStudents';
 import AdminCourses from './pages/AdminCourses';
@@ -34,6 +35,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
             <GradesEntry />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/attendance-recap"
+        element={
+          <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+            <AttendanceRecap />
           </ProtectedRoute>
         }
       />

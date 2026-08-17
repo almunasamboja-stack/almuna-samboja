@@ -323,6 +323,7 @@ export default function StudentDashboard() {
                           <th className="pb-2 font-medium">Tanggal</th>
                           <th className="pb-2 font-medium">Mata Pelajaran</th>
                           <th className="pb-2 font-medium text-right">Nilai</th>
+                          <th className="pb-2 font-medium">Keterangan</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -333,6 +334,7 @@ export default function StudentDashboard() {
                             </td>
                             <td className="py-2.5">{g.subject}</td>
                             <td className="py-2.5 text-right font-semibold text-navy">{g.score}</td>
+                            <td className="py-2.5 text-slate-500">{g.notes || '-'}</td>
                           </tr>
                         ))}
                       </tbody>

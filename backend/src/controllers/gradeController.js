@@ -44,7 +44,7 @@ async function getClassDailyGrades(req, res) {
         user: { select: { name: true, avatarUrl: true } },
         enrollments: { include: { course: { select: { name: true } } } },
         grades: {
-          where: { type: 'DAILY', date: { gte: startOfDay, lte: endOfDay } },
+          where: { type: 'DAILY', createdAt: { gte: startOfDay, lte: endOfDay } },
           orderBy: { id: 'asc' },
         },
       },
@@ -56,7 +56,13 @@ async function getClassDailyGrades(req, res) {
       name: s.user.name,
       avatarUrl: s.user.avatarUrl,
       class: s.enrollments.length > 0 ? s.enrollments.map((e) => e.course.name).join(', ') : 'Belum ada kelas',
-      todayGrades: s.grades.map((g) => ({ id: g.id, subject: g.subject, score: g.score })),
+      todayGrades: s.grades.map((g) => ({
+        id: g.id,
+        subject: g.subject,
+        score: g.score,
+        notes: g.notes,
+        date: g.date,
+      })),
     }));
 
     res.json({ students: result });
@@ -67,10 +73,10 @@ async function getClassDailyGrades(req, res) {
 }
 
 // POST /api/grades -> tambah nilai (guru/admin)
-// body: { studentId, subject, type: 'DAILY'|'MONTHLY', score, date }
+// body: { studentId, subject, type: 'DAILY'|'MONTHLY', score, date, notes }
 async function addGrade(req, res) {
   try {
-    const { studentId, subject, type, score, date } = req.body;
+    const { studentId, subject, type, score, date, notes } = req.body;
 
     if (!studentId || !subject || !type || score === undefined) {
       return res.status(400).json({ message: 'Data nilai tidak lengkap' });
@@ -86,6 +92,7 @@ async function addGrade(req, res) {
         type,
         score: Number(score),
         date: date ? new Date(date) : new Date(),
+        notes: notes || null,
       },
     });
 
@@ -97,11 +104,11 @@ async function addGrade(req, res) {
 }
 
 // PUT /api/grades/:id -> edit nilai (guru/admin)
-// body: { subject, score }
+// body: { subject, score, date, notes }
 async function updateGrade(req, res) {
   try {
     const { id } = req.params;
-    const { subject, score } = req.body;
+    const { subject, score, date, notes } = req.body;
 
     const existing = await prisma.grade.findUnique({ where: { id: Number(id) } });
     if (!existing) {
@@ -116,6 +123,8 @@ async function updateGrade(req, res) {
       data: {
         subject: subject ?? existing.subject,
         score: score !== undefined ? Number(score) : existing.score,
+        date: date ? new Date(date) : existing.date,
+        notes: notes !== undefined ? notes : existing.notes,
       },
     });
 

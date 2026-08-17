@@ -114,7 +114,9 @@ model Grade {
   subject   String
   type      String   // "DAILY" | "MONTHLY"
   score     Float
-  date      DateTime @default(now())
+  notes     String?  // keterangan tambahan tentang nilai ini (opsional)
+  date      DateTime @default(now()) // tanggal nilai berlaku (bisa diedit, boleh beda dari tanggal input)
+  createdAt DateTime @default(now()) // kapan entri ini benar-benar diinput (dipakai untuk daftar "hari ini")
 
   @@map("grades")
 }

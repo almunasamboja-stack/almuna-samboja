@@ -120,4 +120,54 @@ async function getStudentAttendance(req, res) {
   }
 }
 
-module.exports = { getTodayAttendance, recordAttendance, getStudentAttendance };
+// GET /api/attendance/recap?date=YYYY-MM-DD&courseId=X -> rekap absensi untuk 1 tanggal tertentu
+// (untuk halaman "Rekap Absensi Per Tanggal" guru/admin). courseId opsional.
+async function getAttendanceByDate(req, res) {
+  try {
+    const { date, courseId } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ message: 'Tanggal wajib diisi' });
+    }
+
+    const target = new Date(date);
+    if (Number.isNaN(target.getTime())) {
+      return res.status(400).json({ message: 'Format tanggal tidak valid' });
+    }
+    const startOfDay = new Date(target);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(target);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const students = await prisma.student.findMany({
+      where: {
+        status: 'APPROVED',
+        ...(courseId ? { enrollments: { some: { courseId: Number(courseId) } } } : {}),
+      },
+      include: {
+        user: { select: { name: true, avatarUrl: true } },
+        enrollments: { include: { course: { select: { name: true } } } },
+        attendances: {
+          where: { date: { gte: startOfDay, lte: endOfDay } },
+          take: 1,
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    const result = students.map((s) => ({
+      studentId: s.id,
+      name: s.user.name,
+      avatarUrl: s.user.avatarUrl,
+      class: s.enrollments.length > 0 ? s.enrollments.map((e) => e.course.name).join(', ') : 'Belum ada kelas',
+      status: s.attendances[0]?.status || null, // null = belum/tidak diabsen pada tanggal ini
+    }));
+
+    res.json({ students: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mengambil rekap absensi' });
+  }
+}
+
+module.exports = { getTodayAttendance, recordAttendance, getStudentAttendance, getAttendanceByDate };

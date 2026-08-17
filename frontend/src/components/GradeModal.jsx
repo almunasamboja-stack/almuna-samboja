@@ -11,18 +11,28 @@ const SUBJECT_SUGGESTIONS = [
   'SNBT & PTN',
 ];
 
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function GradeModal({ student, editingGrade, onClose, onSubmit, submitting }) {
   const [subject, setSubject] = useState('');
   const [score, setScore] = useState('');
+  const [date, setDate] = useState(todayInputValue());
+  const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (editingGrade) {
       setSubject(editingGrade.subject);
       setScore(String(editingGrade.score));
+      setDate(editingGrade.date ? editingGrade.date.slice(0, 10) : todayInputValue());
+      setNotes(editingGrade.notes || '');
     } else {
       setSubject('');
       setScore('');
+      setDate(todayInputValue());
+      setNotes('');
     }
     setError('');
   }, [editingGrade, student]);
@@ -41,7 +51,17 @@ export default function GradeModal({ student, editingGrade, onClose, onSubmit, s
       setError('Nilai harus berupa angka 0 - 100');
       return;
     }
-    onSubmit({ subject: subject.trim(), score: numericScore, gradeId: editingGrade?.id });
+    if (!date) {
+      setError('Tanggal wajib diisi');
+      return;
+    }
+    onSubmit({
+      subject: subject.trim(),
+      score: numericScore,
+      date,
+      notes: notes.trim(),
+      gradeId: editingGrade?.id,
+    });
   }
 
   return (
@@ -78,16 +98,38 @@ export default function GradeModal({ student, editingGrade, onClose, onSubmit, s
               ))}
             </datalist>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1">Nilai (0 - 100)</label>
+              <input
+                required
+                type="number"
+                min="0"
+                max="100"
+                className="input-field"
+                value={score}
+                onChange={(e) => setScore(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1">Tanggal</label>
+              <input
+                required
+                type="date"
+                className="input-field"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+          </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1">Nilai (0 - 100)</label>
-            <input
-              required
-              type="number"
-              min="0"
-              max="100"
+            <label className="text-sm font-medium text-slate-700 block mb-1">Keterangan (opsional)</label>
+            <textarea
+              rows={2}
               className="input-field"
-              value={score}
-              onChange={(e) => setScore(e.target.value)}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Contoh: nilai ulangan harian bab 3"
             />
           </div>
 

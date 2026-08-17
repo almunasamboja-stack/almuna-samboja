@@ -48,6 +48,9 @@ export default function Navbar() {
               <Link to="/dashboard" className="text-sm font-medium text-navy hover:text-gold transition">
                 Absensi
               </Link>
+              <Link to="/attendance-recap" className="text-sm font-medium text-navy hover:text-gold transition">
+                Rekap Absensi
+              </Link>
               <Link to="/grades" className="text-sm font-medium text-navy hover:text-gold transition">
                 Nilai Harian
               </Link>
@@ -91,6 +94,9 @@ export default function Navbar() {
                     </Link>
                     <Link to="/admin/reports" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Rekap Kelas
+                    </Link>
+                    <Link to="/attendance-recap" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Rekap Absensi
                     </Link>
                     <Link to="/admin/payments" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Pembayaran SPP
