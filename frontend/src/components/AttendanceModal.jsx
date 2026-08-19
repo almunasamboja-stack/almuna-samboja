@@ -1,4 +1,4 @@
-// Modal pop-up ketika guru mengklik kartu siswa: pilih HADIR / SAKIT / ALPHA
+// Modal pop-up ketika guru mengklik kartu siswa: pilih HADIR / SAKIT / IZIN / ALPHA
 import { useState } from 'react';
 import WhatsAppToggle from './WhatsAppToggle';
 import { resolveImageUrl } from '../utils/media';
@@ -6,6 +6,7 @@ import { resolveImageUrl } from '../utils/media';
 const OPTIONS = [
   { status: 'PRESENT', label: 'HADIR', emoji: '✅', className: 'bg-green-500 hover:bg-green-600' },
   { status: 'SICK', label: 'SAKIT', emoji: '🤒', className: 'bg-yellow-400 hover:bg-yellow-500' },
+  { status: 'IZIN', label: 'IZIN', emoji: '📝', className: 'bg-blue-500 hover:bg-blue-600' },
   { status: 'ALPHA', label: 'ALPHA', emoji: '❌', className: 'bg-red-500 hover:bg-red-600' },
 ];
 
@@ -30,16 +31,16 @@ export default function AttendanceModal({ student, onClose, onSubmit, submitting
         </div>
 
         <p className="text-sm font-medium text-slate-600 mb-3">Pilih status kehadiran:</p>
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-4 gap-2 mb-5">
           {OPTIONS.map((opt) => (
             <button
               key={opt.status}
               disabled={submitting}
               onClick={() => onSubmit(student.studentId, opt.status, notify)}
-              className={`flex flex-col items-center gap-1 text-white font-bold py-4 rounded-xl transition disabled:opacity-60 ${opt.className}`}
+              className={`flex flex-col items-center gap-1 text-white font-bold py-3 rounded-xl transition disabled:opacity-60 ${opt.className}`}
             >
-              <span className="text-2xl">{opt.emoji}</span>
-              <span className="text-xs tracking-wide">{opt.label}</span>
+              <span className="text-xl">{opt.emoji}</span>
+              <span className="text-[11px] tracking-wide">{opt.label}</span>
             </button>
           ))}
         </div>

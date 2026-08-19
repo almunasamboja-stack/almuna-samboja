@@ -5,10 +5,11 @@ import Navbar from '../components/Navbar';
 import api from '../api/axios';
 import { resolveImageUrl } from '../utils/media';
 
-const STATUS_LABEL = { PRESENT: 'Hadir', SICK: 'Sakit', ALPHA: 'Alpha' };
+const STATUS_LABEL = { PRESENT: 'Hadir', SICK: 'Sakit', IZIN: 'Izin', ALPHA: 'Alpha' };
 const STATUS_BADGE = {
   PRESENT: 'bg-green-100 text-green-700',
   SICK: 'bg-yellow-100 text-yellow-700',
+  IZIN: 'bg-blue-100 text-blue-700',
   ALPHA: 'bg-red-100 text-maroon',
 };
 
@@ -52,6 +53,7 @@ export default function AttendanceRecap() {
 
   const hadir = students.filter((s) => s.status === 'PRESENT').length;
   const sakit = students.filter((s) => s.status === 'SICK').length;
+  const izin = students.filter((s) => s.status === 'IZIN').length;
   const alpha = students.filter((s) => s.status === 'ALPHA').length;
   const belum = students.filter((s) => !s.status).length;
 
@@ -94,7 +96,7 @@ export default function AttendanceRecap() {
         </div>
 
         {/* RINGKASAN */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           <div className="card !p-3 text-center">
             <p className="text-xl font-bold text-green-600">{hadir}</p>
             <p className="text-xs text-slate-500">Hadir</p>
@@ -102,6 +104,10 @@ export default function AttendanceRecap() {
           <div className="card !p-3 text-center">
             <p className="text-xl font-bold text-yellow-600">{sakit}</p>
             <p className="text-xs text-slate-500">Sakit</p>
+          </div>
+          <div className="card !p-3 text-center">
+            <p className="text-xl font-bold text-blue-600">{izin}</p>
+            <p className="text-xs text-slate-500">Izin</p>
           </div>
           <div className="card !p-3 text-center">
             <p className="text-xl font-bold text-maroon">{alpha}</p>

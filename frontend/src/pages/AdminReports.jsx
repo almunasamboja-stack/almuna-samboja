@@ -47,6 +47,7 @@ export default function AdminReports() {
       Kategori: r.category,
       Hadir: r.present,
       Sakit: r.sick,
+      Izin: r.izin,
       Alpha: r.alpha,
       'Total Absensi Tercatat': r.totalAttendance,
       '% Kehadiran': r.attendancePercentage,
@@ -57,7 +58,7 @@ export default function AdminReports() {
     const worksheet = XLSX.utils.json_to_sheet(rows);
     worksheet['!cols'] = [
       { wch: 22 }, { wch: 26 }, { wch: 22 }, { wch: 16 },
-      { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
+      { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
       { wch: 12 }, { wch: 20 }, { wch: 20 },
     ];
 
@@ -122,13 +123,14 @@ export default function AdminReports() {
           <p className="text-slate-400">Memuat rekap...</p>
         ) : (
           <div className="card overflow-x-auto">
-            <table className="w-full text-sm min-w-[900px]">
+            <table className="w-full text-sm min-w-[960px]">
               <thead>
                 <tr className="text-left text-slate-400 border-b border-slate-100">
                   <th className="pb-3 font-medium">Nama</th>
                   {activeCourseId === 'ALL' && <th className="pb-3 font-medium">Kelas</th>}
                   <th className="pb-3 font-medium text-center">Hadir</th>
                   <th className="pb-3 font-medium text-center">Sakit</th>
+                  <th className="pb-3 font-medium text-center">Izin</th>
                   <th className="pb-3 font-medium text-center">Alpha</th>
                   <th className="pb-3 font-medium text-center">% Kehadiran</th>
                   <th className="pb-3 font-medium text-center">Rata Nilai Harian</th>
@@ -142,6 +144,7 @@ export default function AdminReports() {
                     {activeCourseId === 'ALL' && <td className="py-3 text-slate-500">{r.className}</td>}
                     <td className="py-3 text-center text-green-600 font-semibold">{r.present}</td>
                     <td className="py-3 text-center text-yellow-600 font-semibold">{r.sick}</td>
+                    <td className="py-3 text-center text-blue-600 font-semibold">{r.izin}</td>
                     <td className="py-3 text-center text-maroon font-semibold">{r.alpha}</td>
                     <td className="py-3 text-center font-semibold text-navy">{r.attendancePercentage}%</td>
                     <td className="py-3 text-center">{r.dailyAverage ?? '-'}</td>
@@ -150,7 +153,7 @@ export default function AdminReports() {
                 ))}
                 {recap.length === 0 && (
                   <tr>
-                    <td colSpan={activeCourseId === 'ALL' ? 8 : 7} className="py-6 text-center text-slate-400">
+                    <td colSpan={activeCourseId === 'ALL' ? 9 : 8} className="py-6 text-center text-slate-400">
                       Belum ada data siswa pada kelas ini.
                     </td>
                   </tr>

@@ -4,6 +4,7 @@ import { resolveImageUrl } from '../utils/media';
 const STATUS_STYLES = {
   PRESENT: 'border-green-500 bg-green-50',
   SICK: 'border-yellow-400 bg-yellow-50',
+  IZIN: 'border-blue-400 bg-blue-50',
   ALPHA: 'border-red-500 bg-red-50',
   null: 'border-slate-200 bg-white hover:border-gold',
 };
@@ -11,6 +12,7 @@ const STATUS_STYLES = {
 const STATUS_BADGE = {
   PRESENT: { label: 'Hadir', className: 'bg-green-500 text-white' },
   SICK: { label: 'Sakit', className: 'bg-yellow-400 text-white' },
+  IZIN: { label: 'Izin', className: 'bg-blue-500 text-white' },
   ALPHA: { label: 'Alpha', className: 'bg-red-500 text-white' },
 };
 

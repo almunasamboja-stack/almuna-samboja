@@ -6,6 +6,7 @@
 const STATUS_LABEL = {
   PRESENT: 'HADIR',
   SICK: 'SAKIT',
+  IZIN: 'IZIN',
   ALPHA: 'ALPHA (tanpa keterangan)',
 };
 
@@ -24,7 +25,7 @@ function buildMessage(studentName, status, date) {
  * Kirim notifikasi absensi ke nomor orang tua via Fonnte.
  * @param {string} parentPhone - nomor HP/WA orang tua, contoh "0812xxxxxxx"
  * @param {string} studentName - nama siswa
- * @param {'PRESENT'|'SICK'|'ALPHA'} status - status kehadiran
+ * @param {'PRESENT'|'SICK'|'IZIN'|'ALPHA'} status - status kehadiran
  * @param {Date} [date] - tanggal absensi, default sekarang
  * @returns {Promise<{success: boolean, message: string}>}
  */

@@ -6,8 +6,8 @@ import AvatarManager from '../components/AvatarManager';
 import ChangePasswordForm from '../components/ChangePasswordForm';
 import api from '../api/axios';
 
-const STATUS_LABEL = { PRESENT: 'Hadir', SICK: 'Sakit', ALPHA: 'Alpha' };
-const STATUS_COLOR = { PRESENT: 'text-green-600', SICK: 'text-yellow-600', ALPHA: 'text-red-600' };
+const STATUS_LABEL = { PRESENT: 'Hadir', SICK: 'Sakit', IZIN: 'Izin', ALPHA: 'Alpha' };
+const STATUS_COLOR = { PRESENT: 'text-green-600', SICK: 'text-yellow-600', IZIN: 'text-blue-600', ALPHA: 'text-red-600' };
 const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
