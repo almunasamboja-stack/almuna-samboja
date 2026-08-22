@@ -15,6 +15,7 @@ import ExamsManage from './pages/ExamsManage';
 import ExamResultsRecap from './pages/ExamResultsRecap';
 import StudentExams from './pages/StudentExams';
 import TakeExam from './pages/TakeExam';
+import ExamReview from './pages/ExamReview';
 import MyProfile from './pages/MyProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -84,6 +85,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['STUDENT']}>
             <TakeExam />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/student-exams/results/:attemptId"
+        element={
+          <ProtectedRoute allowedRoles={['STUDENT']}>
+            <ExamReview />
           </ProtectedRoute>
         }
       />
