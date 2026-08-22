@@ -1,6 +1,6 @@
 // Halaman siswa mengerjakan ujian: baca soal dari Google Drive (embed) + isi jawaban + hasil otomatis
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import api from '../api/axios';
 
@@ -97,9 +97,14 @@ export default function TakeExam() {
               </p>
             </div>
 
-            <button onClick={() => navigate('/student-exams')} className="btn-primary w-full">
-              Kembali ke Daftar Ujian
-            </button>
+            <div className="flex gap-3">
+              <Link to={`/student-exams/results/${result.id}`} className="btn-outline flex-1 text-center">
+                Review Jawaban
+              </Link>
+              <button onClick={() => navigate('/student-exams')} className="btn-primary flex-1">
+                Kembali
+              </button>
+            </div>
           </div>
         </main>
       </div>
