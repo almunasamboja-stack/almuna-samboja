@@ -37,6 +37,9 @@ export default function Navbar() {
               <Link to="/user" className="text-sm font-medium text-navy hover:text-gold transition">
                 Dashboard Saya
               </Link>
+              <Link to="/student-exams" className="text-sm font-medium text-navy hover:text-gold transition">
+                Ujian Saya
+              </Link>
               <button onClick={handleLogout} className="btn-outline text-sm px-4 py-2">
                 Keluar
               </button>
@@ -53,6 +56,9 @@ export default function Navbar() {
               </Link>
               <Link to="/grades" className="text-sm font-medium text-navy hover:text-gold transition">
                 Nilai Harian
+              </Link>
+              <Link to="/exams" className="text-sm font-medium text-navy hover:text-gold transition">
+                Ujian Online
               </Link>
               <Link to="/profile" className="text-sm font-medium text-navy hover:text-gold transition">
                 Profil Saya
@@ -100,6 +106,9 @@ export default function Navbar() {
                     </Link>
                     <Link to="/admin/payments" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Pembayaran SPP
+                    </Link>
+                    <Link to="/exams" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Ujian Online
                     </Link>
                     <Link to="/profile" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Profil Saya

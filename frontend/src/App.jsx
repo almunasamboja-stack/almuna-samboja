@@ -11,6 +11,9 @@ import AdminCourses from './pages/AdminCourses';
 import AdminGallery from './pages/AdminGallery';
 import AdminReports from './pages/AdminReports';
 import AdminPayments from './pages/AdminPayments';
+import ExamsManage from './pages/ExamsManage';
+import StudentExams from './pages/StudentExams';
+import TakeExam from './pages/TakeExam';
 import MyProfile from './pages/MyProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -44,6 +47,33 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
             <AttendanceRecap />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/exams"
+        element={
+          <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+            <ExamsManage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/student-exams"
+        element={
+          <ProtectedRoute allowedRoles={['STUDENT']}>
+            <StudentExams />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/student-exams/:id"
+        element={
+          <ProtectedRoute allowedRoles={['STUDENT']}>
+            <TakeExam />
           </ProtectedRoute>
         }
       />

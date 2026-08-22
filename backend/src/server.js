@@ -13,6 +13,8 @@ const galleryRoutes = require('./routes/galleryRoutes');
 const userRoutes = require('./routes/userRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const examRoutes = require('./routes/examRoutes');
+const studentExamRoutes = require('./routes/studentExamRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -45,6 +47,8 @@ app.use('/api/gallery', galleryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/exams', examRoutes);
+app.use('/api/student-exams', studentExamRoutes);
 
 // 404 handler
 app.use((req, res) => {
