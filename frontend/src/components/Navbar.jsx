@@ -60,6 +60,9 @@ export default function Navbar() {
               <Link to="/exams" className="text-sm font-medium text-navy hover:text-gold transition">
                 Ujian Online
               </Link>
+              <Link to="/exam-results" className="text-sm font-medium text-navy hover:text-gold transition">
+                Rekap Nilai Ujian
+              </Link>
               <Link to="/profile" className="text-sm font-medium text-navy hover:text-gold transition">
                 Profil Saya
               </Link>
@@ -109,6 +112,9 @@ export default function Navbar() {
                     </Link>
                     <Link to="/exams" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Ujian Online
+                    </Link>
+                    <Link to="/exam-results" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Rekap Nilai Ujian
                     </Link>
                     <Link to="/profile" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Profil Saya

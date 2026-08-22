@@ -178,6 +178,42 @@ async function getExamAttempts(req, res) {
   }
 }
 
+// GET /api/exams/results-recap?courseId=X -> rekap nilai ujian per anak, difilter per pelajaran/kelas (admin/guru)
+async function getExamResultsRecap(req, res) {
+  try {
+    const { courseId } = req.query;
+
+    const attempts = await prisma.examAttempt.findMany({
+      where: {
+        ...(courseId ? { exam: { courseId: Number(courseId) } } : {}),
+      },
+      include: {
+        student: { include: { user: { select: { name: true } } } },
+        exam: { include: { course: { select: { id: true, name: true, category: true } } } },
+      },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    const result = attempts.map((a) => ({
+      attemptId: a.id,
+      studentId: a.studentId,
+      studentName: a.student.user.name,
+      examTitle: a.exam.title,
+      courseName: a.exam.course?.name || 'Semua Kelas',
+      courseCategory: a.exam.course?.category || '-',
+      score: a.score,
+      correctCount: a.correctCount,
+      totalQuestions: a.totalQuestions,
+      submittedAt: a.submittedAt,
+    }));
+
+    res.json({ attempts: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mengambil rekap nilai ujian' });
+  }
+}
+
 module.exports = {
   getDriveFiles,
   getAllExams,
@@ -186,4 +222,5 @@ module.exports = {
   togglePublish,
   deleteExam,
   getExamAttempts,
+  getExamResultsRecap,
 };

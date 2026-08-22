@@ -12,6 +12,7 @@ import AdminGallery from './pages/AdminGallery';
 import AdminReports from './pages/AdminReports';
 import AdminPayments from './pages/AdminPayments';
 import ExamsManage from './pages/ExamsManage';
+import ExamResultsRecap from './pages/ExamResultsRecap';
 import StudentExams from './pages/StudentExams';
 import TakeExam from './pages/TakeExam';
 import MyProfile from './pages/MyProfile';
@@ -56,6 +57,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
             <ExamsManage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/exam-results"
+        element={
+          <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+            <ExamResultsRecap />
           </ProtectedRoute>
         }
       />

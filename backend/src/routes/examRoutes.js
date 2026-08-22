@@ -8,11 +8,16 @@ const {
   togglePublish,
   deleteExam,
   getExamAttempts,
+  getExamResultsRecap,
 } = require('../controllers/examController');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 
 // GET /api/exams/drive-files (admin/guru) - daftar file soal dari Google Drive
 router.get('/drive-files', authMiddleware, requireRole('TEACHER', 'ADMIN'), getDriveFiles);
+
+// GET /api/exams/results-recap?courseId=X (admin/guru) - rekap nilai per anak per pelajaran
+// Catatan: harus didaftarkan SEBELUM /:id supaya "results-recap" tidak ketangkap sebagai :id
+router.get('/results-recap', authMiddleware, requireRole('TEACHER', 'ADMIN'), getExamResultsRecap);
 
 // GET /api/exams (admin/guru)
 router.get('/', authMiddleware, requireRole('TEACHER', 'ADMIN'), getAllExams);
