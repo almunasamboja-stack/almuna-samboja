@@ -214,6 +214,132 @@ async function getExamResultsRecap(req, res) {
   }
 }
 
+// GET /api/exams/summary?courseId=X -> ringkasan rata-rata nilai PER UJIAN yang diadakan (admin/guru)
+async function getExamSummary(req, res) {
+  try {
+    const { courseId } = req.query;
+
+    const exams = await prisma.exam.findMany({
+      where: {
+        ...(courseId ? { courseId: Number(courseId) } : {}),
+      },
+      include: {
+        course: { select: { name: true } },
+        attempts: { select: { score: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const summary = exams.map((e) => {
+      const scores = e.attempts.map((a) => a.score);
+      const average = scores.length > 0 ? Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10 : null;
+      const highest = scores.length > 0 ? Math.max(...scores) : null;
+      const lowest = scores.length > 0 ? Math.min(...scores) : null;
+
+      return {
+        examId: e.id,
+        title: e.title,
+        courseName: e.course?.name || 'Semua Kelas',
+        totalAttempts: scores.length,
+        average,
+        highest,
+        lowest,
+      };
+    });
+
+    res.json({ summary });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mengambil ringkasan ujian' });
+  }
+}
+
+// POST /api/exams/attempts -> catat nilai ujian secara manual (admin/guru), misal untuk ujian offline
+// body: { studentId, examId, score, correctCount, totalQuestions, submittedAt }
+async function createAttempt(req, res) {
+  try {
+    const { studentId, examId, score, correctCount, totalQuestions, submittedAt } = req.body;
+
+    if (!studentId || !examId || score === undefined || correctCount === undefined || totalQuestions === undefined) {
+      return res.status(400).json({ message: 'Data nilai tidak lengkap' });
+    }
+    if (Number(score) < 0 || Number(score) > 100) {
+      return res.status(400).json({ message: 'Nilai harus di antara 0 - 100' });
+    }
+
+    const attempt = await prisma.examAttempt.create({
+      data: {
+        studentId: Number(studentId),
+        examId: Number(examId),
+        score: Number(score),
+        correctCount: Number(correctCount),
+        totalQuestions: Number(totalQuestions),
+        submittedAt: submittedAt ? new Date(submittedAt) : new Date(),
+      },
+      include: {
+        student: { include: { user: { select: { name: true } } } },
+        exam: { include: { course: { select: { id: true, name: true, category: true } } } },
+      },
+    });
+
+    res.status(201).json({ message: 'Nilai ujian berhasil dicatat', attempt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mencatat nilai ujian' });
+  }
+}
+
+// PUT /api/exams/attempts/:attemptId -> edit nilai ujian (admin/guru)
+async function updateAttempt(req, res) {
+  try {
+    const { attemptId } = req.params;
+    const { score, correctCount, totalQuestions, submittedAt } = req.body;
+
+    const existing = await prisma.examAttempt.findUnique({ where: { id: Number(attemptId) } });
+    if (!existing) {
+      return res.status(404).json({ message: 'Nilai ujian tidak ditemukan' });
+    }
+    if (score !== undefined && (Number(score) < 0 || Number(score) > 100)) {
+      return res.status(400).json({ message: 'Nilai harus di antara 0 - 100' });
+    }
+
+    const attempt = await prisma.examAttempt.update({
+      where: { id: Number(attemptId) },
+      data: {
+        score: score !== undefined ? Number(score) : existing.score,
+        correctCount: correctCount !== undefined ? Number(correctCount) : existing.correctCount,
+        totalQuestions: totalQuestions !== undefined ? Number(totalQuestions) : existing.totalQuestions,
+        submittedAt: submittedAt ? new Date(submittedAt) : existing.submittedAt,
+      },
+      include: {
+        student: { include: { user: { select: { name: true } } } },
+        exam: { include: { course: { select: { id: true, name: true, category: true } } } },
+      },
+    });
+
+    res.json({ message: 'Nilai ujian berhasil diperbarui', attempt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal memperbarui nilai ujian' });
+  }
+}
+
+// DELETE /api/exams/attempts/:attemptId -> hapus nilai ujian (admin/guru)
+async function deleteAttempt(req, res) {
+  try {
+    const { attemptId } = req.params;
+    const existing = await prisma.examAttempt.findUnique({ where: { id: Number(attemptId) } });
+    if (!existing) {
+      return res.status(404).json({ message: 'Nilai ujian tidak ditemukan' });
+    }
+    await prisma.examAttempt.delete({ where: { id: Number(attemptId) } });
+    res.json({ message: 'Nilai ujian berhasil dihapus' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal menghapus nilai ujian' });
+  }
+}
+
 module.exports = {
   getDriveFiles,
   getAllExams,
@@ -223,4 +349,8 @@ module.exports = {
   deleteExam,
   getExamAttempts,
   getExamResultsRecap,
+  getExamSummary,
+  createAttempt,
+  updateAttempt,
+  deleteAttempt,
 };
