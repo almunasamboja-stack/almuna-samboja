@@ -21,6 +21,7 @@ export default function ExamResultsRecap() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('submittedAt');
   const [sortDir, setSortDir] = useState('desc');
+  const [searchName, setSearchName] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -75,7 +76,11 @@ export default function ExamResultsRecap() {
     }
   }
 
-  const sortedAttempts = [...attempts].sort((a, b) => {
+  const filteredAttempts = attempts.filter((a) =>
+    a.studentName.toLowerCase().includes(searchName.trim().toLowerCase())
+  );
+
+  const sortedAttempts = [...filteredAttempts].sort((a, b) => {
     let valA = a[sortBy];
     let valB = b[sortBy];
     if (sortBy === 'submittedAt') {
@@ -243,6 +248,17 @@ export default function ExamResultsRecap() {
           ))}
         </div>
 
+        {/* FILTER NAMA SISWA */}
+        <div className="mb-6">
+          <input
+            type="text"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            placeholder="🔍 Cari nama siswa..."
+            className="input-field max-w-xs"
+          />
+        </div>
+
         {loading ? (
           <p className="text-slate-400">Memuat rekap...</p>
         ) : (
@@ -321,7 +337,9 @@ export default function ExamResultsRecap() {
                   {sortedAttempts.length === 0 && (
                     <tr>
                       <td colSpan={7} className="py-6 text-center text-slate-400">
-                        Belum ada hasil ujian untuk pelajaran ini.
+                        {searchName
+                          ? `Tidak ada siswa bernama "${searchName}" pada pelajaran ini.`
+                          : 'Belum ada hasil ujian untuk pelajaran ini.'}
                       </td>
                     </tr>
                   )}

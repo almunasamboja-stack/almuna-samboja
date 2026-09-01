@@ -22,3 +22,21 @@
     @apply w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent;
   }
 }
+
+/* Saat mencetak (misal Nota Pembayaran), sembunyikan semua elemen KECUALI
+   yang ada di dalam #receipt-print-area (navbar, tombol, dsb otomatis hilang). */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible;
+  }
+  #receipt-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}

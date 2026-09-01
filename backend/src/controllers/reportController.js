@@ -3,6 +3,7 @@ const prisma = require('../lib/prisma');
 
 // GET /api/reports/class-recap?courseId=X -> rekap kehadiran & nilai per siswa
 // Jika courseId tidak diberikan, rekap seluruh siswa yang disetujui (semua kelas).
+// Kalau courseId diisi, ikut disertakan status pembayaran SPP bulan berjalan + nominal SPP kelas itu.
 async function getClassRecap(req, res) {
   try {
     const { courseId } = req.query;
@@ -20,6 +21,29 @@ async function getClassRecap(req, res) {
       },
       orderBy: { id: 'asc' },
     });
+
+    // Kalau lagi lihat 1 kelas spesifik, cek juga siapa saja yang sudah bayar SPP bulan ini
+    let paidStudentIds = new Set();
+    let courseFee = null;
+    const now = new Date();
+    const periodMonth = now.getMonth() + 1;
+    const periodYear = now.getFullYear();
+
+    if (courseId) {
+      const course = await prisma.course.findUnique({ where: { id: Number(courseId) } });
+      courseFee = course?.fee ?? null;
+
+      const payments = await prisma.payment.findMany({
+        where: {
+          courseId: Number(courseId),
+          periodMonth,
+          periodYear,
+          studentId: { in: students.map((s) => s.id) },
+        },
+        select: { studentId: true },
+      });
+      paidStudentIds = new Set(payments.map((p) => p.studentId));
+    }
 
     const recap = students.map((s) => {
       const present = s.attendances.filter((a) => a.status === 'PRESENT').length;
@@ -55,6 +79,13 @@ async function getClassRecap(req, res) {
         attendancePercentage,
         dailyAverage,
         monthlyAverage,
+        ...(courseId
+          ? {
+              paymentStatus: paidStudentIds.has(s.id) ? 'PAID' : 'UNPAID',
+              paymentPeriodMonth: periodMonth,
+              paymentPeriodYear: periodYear,
+            }
+          : {}),
       };
     });
 
@@ -63,7 +94,7 @@ async function getClassRecap(req, res) {
       courseInfo = await prisma.course.findUnique({ where: { id: Number(courseId) } });
     }
 
-    res.json({ course: courseInfo, students: recap });
+    res.json({ course: courseInfo, courseFee, students: recap });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Gagal mengambil rekap kelas' });

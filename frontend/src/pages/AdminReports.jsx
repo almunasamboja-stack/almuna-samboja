@@ -8,8 +8,10 @@ export default function AdminReports() {
   const [courses, setCourses] = useState([]);
   const [activeCourseId, setActiveCourseId] = useState('ALL');
   const [recap, setRecap] = useState([]);
+  const [courseFee, setCourseFee] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recordingSpp, setRecordingSpp] = useState(false);
+  const [payingId, setPayingId] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -26,6 +28,7 @@ export default function AdminReports() {
       const params = courseId && courseId !== 'ALL' ? { courseId } : {};
       const { data } = await api.get('/reports/class-recap', { params });
       setRecap(data.students);
+      setCourseFee(data.courseFee ?? null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -55,6 +58,7 @@ export default function AdminReports() {
       '% Kehadiran': r.attendancePercentage,
       'Rata-rata Nilai Harian': r.dailyAverage ?? '-',
       'Rata-rata Nilai Bulanan': r.monthlyAverage ?? '-',
+      ...(activeCourseId !== 'ALL' ? { 'Status SPP Bulan Ini': r.paymentStatus === 'PAID' ? 'Sudah Bayar' : 'Belum Bayar' } : {}),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -95,6 +99,28 @@ export default function AdminReports() {
       showToast(err.response?.data?.message || 'Gagal mencatat SPP otomatis');
     } finally {
       setRecordingSpp(false);
+    }
+  }
+
+  async function handlePaySingle(student) {
+    if (activeCourseId === 'ALL' || courseFee === null) return;
+    setPayingId(student.studentId);
+    try {
+      await api.post('/payments', {
+        studentId: student.studentId,
+        courseId: activeCourseId,
+        amount: courseFee,
+        periodMonth: student.paymentPeriodMonth,
+        periodYear: student.paymentPeriodYear,
+        paymentDate: new Date().toISOString().slice(0, 10),
+        method: 'CASH',
+      });
+      showToast(`SPP ${student.name} berhasil dicatat.`);
+      await loadRecap(activeCourseId);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal mencatat pembayaran');
+    } finally {
+      setPayingId(null);
     }
   }
 
@@ -175,6 +201,12 @@ export default function AdminReports() {
                   <th className="pb-3 font-medium text-center">% Kehadiran</th>
                   <th className="pb-3 font-medium text-center">Rata Nilai Harian</th>
                   <th className="pb-3 font-medium text-center">Rata Nilai Bulanan</th>
+                  {activeCourseId !== 'ALL' && (
+                    <>
+                      <th className="pb-3 font-medium text-center">Status SPP</th>
+                      <th className="pb-3 font-medium text-right">Aksi</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -189,11 +221,33 @@ export default function AdminReports() {
                     <td className="py-3 text-center font-semibold text-navy">{r.attendancePercentage}%</td>
                     <td className="py-3 text-center">{r.dailyAverage ?? '-'}</td>
                     <td className="py-3 text-center">{r.monthlyAverage ?? '-'}</td>
+                    {activeCourseId !== 'ALL' && (
+                      <>
+                        <td className="py-3 text-center">
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                            r.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-maroon'
+                          }`}>
+                            {r.paymentStatus === 'PAID' ? 'Sudah Bayar' : 'Belum Bayar'}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          {r.paymentStatus === 'UNPAID' && (
+                            <button
+                              onClick={() => handlePaySingle(r)}
+                              disabled={payingId === r.studentId}
+                              className="text-navy font-medium hover:text-gold transition disabled:opacity-50 whitespace-nowrap"
+                            >
+                              {payingId === r.studentId ? 'Memproses...' : '💰 Bayar'}
+                            </button>
+                          )}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
                 {recap.length === 0 && (
                   <tr>
-                    <td colSpan={activeCourseId === 'ALL' ? 9 : 8} className="py-6 text-center text-slate-400">
+                    <td colSpan={activeCourseId === 'ALL' ? 9 : 10} className="py-6 text-center text-slate-400">
                       Belum ada data siswa pada kelas ini.
                     </td>
                   </tr>

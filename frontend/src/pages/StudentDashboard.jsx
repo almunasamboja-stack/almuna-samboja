@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import GradeChart from '../components/GradeChart';
 import AssessmentChart from '../components/AssessmentChart';
+import PaymentReceiptModal from '../components/PaymentReceiptModal';
 import AvatarManager from '../components/AvatarManager';
 import ChangePasswordForm from '../components/ChangePasswordForm';
 import api from '../api/axios';
@@ -40,6 +41,7 @@ export default function StudentDashboard() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [toast, setToast] = useState(null);
+  const [receiptPayment, setReceiptPayment] = useState(null);
 
   useEffect(() => {
     load();
@@ -373,6 +375,7 @@ export default function StudentDashboard() {
                         <th className="pb-2 font-medium text-right">Jumlah</th>
                         <th className="pb-2 font-medium">Tanggal Bayar</th>
                         <th className="pb-2 font-medium">Metode</th>
+                        <th className="pb-2 font-medium text-right">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -385,11 +388,16 @@ export default function StudentDashboard() {
                           </td>
                           <td className="py-2.5">{new Date(p.paymentDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                           <td className="py-2.5">{p.method === 'CASH' ? 'Tunai' : 'Transfer'}</td>
+                          <td className="py-2.5 text-right">
+                            <button onClick={() => setReceiptPayment(p)} className="text-navy font-medium hover:text-gold transition">
+                              Lihat Nota
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       {payments.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="py-6 text-center text-slate-400">Belum ada riwayat pembayaran.</td>
+                          <td colSpan={6} className="py-6 text-center text-slate-400">Belum ada riwayat pembayaran.</td>
                         </tr>
                       )}
                     </tbody>
@@ -461,6 +469,8 @@ export default function StudentDashboard() {
           {toast}
         </div>
       )}
+
+      <PaymentReceiptModal payment={receiptPayment} onClose={() => setReceiptPayment(null)} />
     </div>
   );
 }
