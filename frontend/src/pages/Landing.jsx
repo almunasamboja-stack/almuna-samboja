@@ -34,9 +34,42 @@ export default function Landing() {
 
       <main className="flex-1">
         {/* HERO */}
-        <section className="bg-navy">
+        <section className="relative bg-gradient-to-br from-navy to-[#145A30] overflow-hidden">
           <div className="container mx-auto px-4 py-16 md:py-24 grid md:grid-cols-2 gap-10 items-center">
-            <div className="flex justify-center md:justify-start">
+            <div className="text-white text-center md:text-left order-2 md:order-1">
+              <span className="inline-block bg-gold/15 text-gold font-semibold text-sm px-3.5 py-1.5 rounded-full mb-5">
+                🏫 Lembaga Kursus Terpadu Samboja
+              </span>
+
+              <h1 className="text-3xl md:text-5xl font-extrabold mb-4 leading-tight">
+                Titipkan Pendidikan Anak Anda pada yang Benar-Benar Peduli
+              </h1>
+
+              <p className="text-slate-100 mb-7 max-w-lg mx-auto md:mx-0">
+                Almuna Samboja hadir sebagai mitra belajar tepercaya keluarga Samboja —
+                transparan, komunikatif, dan selalu melibatkan Anda dalam setiap
+                perkembangan anak.
+              </p>
+
+              <ul className="space-y-2.5 mb-8 text-slate-100 max-w-md mx-auto md:mx-0">
+                <li>🤝 Komunikasi terbuka guru-orang tua, setiap hari</li>
+                <li>📊 Laporan nilai &amp; kehadiran yang jujur dan real-time</li>
+                <li>🏆 Pengajar berpengalaman, kurikulum teruji</li>
+                <li>💬 Konsultasi gratis sebelum mendaftar</li>
+              </ul>
+
+              <div className="flex gap-3 justify-center md:justify-start flex-wrap">
+                <Link to="/register" className="btn-primary">Konsultasi &amp; Daftar Sekarang</Link>
+                <a
+                  href="#program"
+                  className="border-2 border-white text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-white hover:text-navy transition"
+                >
+                  Lihat Program Kursus
+                </a>
+              </div>
+            </div>
+
+            <div className="flex justify-center md:justify-end order-1 md:order-2">
               <div className="w-56 h-56 md:w-72 md:h-72 rounded-2xl bg-gold/10 flex items-center justify-center shadow-2xl p-4">
                 <img
                   src="/images/mascot.png"
@@ -45,21 +78,15 @@ export default function Landing() {
                 />
               </div>
             </div>
-            <div className="text-white text-center md:text-left">
-              <p className="text-gold font-semibold tracking-wide mb-2">Selamat Datang di</p>
-              <h1 className="text-3xl md:text-5xl font-extrabold mb-4 leading-tight">Almuna Samboja</h1>
-              <p className="text-slate-100 mb-6 max-w-lg">
-                Lembaga kursus terpadu yang membina siswa dengan sistem absensi digital,
-                pemantauan nilai real-time, dan komunikasi langsung ke orang tua via WhatsApp.
-              </p>
-              <div className="flex gap-3 justify-center md:justify-start">
-                <Link to="/register" className="btn-primary">Daftar Sekarang</Link>
-                <Link to="/login" className="border-2 border-white text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-white hover:text-navy transition">
-                  Masuk
-                </Link>
-              </div>
-            </div>
           </div>
+
+          <a
+            href="#program"
+            aria-label="Scroll ke bawah untuk lihat program"
+            className="hidden md:flex absolute bottom-6 left-1/2 -translate-x-1/2 text-slate-100/80 text-sm items-center gap-1 animate-bounce hover:text-white transition"
+          >
+            ↓ Lihat Program Kami
+          </a>
         </section>
 
         {/* GALERI */}
@@ -84,7 +111,7 @@ export default function Landing() {
         </section>
 
         {/* DETAIL KURSUS */}
-        <section className="container mx-auto px-4 pb-20">
+        <section id="program" className="container mx-auto px-4 pb-20">
           <h2 className="text-2xl font-bold text-navy mb-2">Detail Kursus</h2>
           <p className="text-slate-500 mb-8">Informasi biaya, jadwal, dan kuota pendaftaran per kelas.</p>
 
