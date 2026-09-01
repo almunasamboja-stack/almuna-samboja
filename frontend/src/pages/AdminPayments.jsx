@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import Navbar from '../components/Navbar';
+import PaymentReceiptModal from '../components/PaymentReceiptModal';
 import api from '../api/axios';
 
 const MONTHS = [
@@ -39,6 +40,7 @@ export default function AdminPayments() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [receiptPayment, setReceiptPayment] = useState(null);
 
   useEffect(() => {
     api
@@ -250,6 +252,9 @@ export default function AdminPayments() {
                     </td>
                     <td className="py-3 text-slate-500">{p.notes || '-'}</td>
                     <td className="py-3 text-right space-x-2 whitespace-nowrap">
+                      <button onClick={() => setReceiptPayment(p)} className="text-navy font-medium hover:text-gold transition">
+                        Nota
+                      </button>
                       <button onClick={() => openEditModal(p)} className="text-navy font-medium hover:text-gold transition">
                         Edit
                       </button>
@@ -394,6 +399,8 @@ export default function AdminPayments() {
           {toast}
         </div>
       )}
+
+      <PaymentReceiptModal payment={receiptPayment} onClose={() => setReceiptPayment(null)} />
     </div>
   );
 }
