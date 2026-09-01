@@ -49,6 +49,7 @@ model Student {
   grades      Grade[]
   payments    Payment[]
   examAttempts ExamAttempt[]
+  assessments Assessment[]
 
   createdAt   DateTime @default(now())
 
@@ -69,6 +70,7 @@ model Course {
   enrollments          Enrollment[]
   payments             Payment[]
   exams                Exam[]
+  assessments          Assessment[]
 
   @@map("courses")
 }
@@ -201,4 +203,30 @@ model ExamAnswer {
   isCorrect      Boolean
 
   @@map("exam_answers")
+}
+
+// Laporan penilaian bulanan per siswa: Speaking, Listening, Vocabulary, Reading, Grammar
+// Biasanya dipakai untuk kelas Bahasa Inggris/Bahasa Arab. Satu baris = satu siswa, satu bulan.
+model Assessment {
+  id          Int      @id @default(autoincrement())
+  studentId   Int
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId    Int?
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  periodMonth Int      // 1-12
+  periodYear  Int      // contoh 2026
+
+  speaking    Float?   // nilai 0-100
+  listening   Float?
+  vocabulary  Float?
+  reading     Float?
+  grammar     Float?
+
+  notes       String?  // catatan guru untuk bulan ini (opsional)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([studentId, periodMonth, periodYear]) // 1 siswa cuma 1 laporan per bulan
+  @@map("assessments")
 }

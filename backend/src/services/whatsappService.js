@@ -22,30 +22,23 @@ function buildMessage(studentName, status, date) {
 }
 
 /**
- * Kirim notifikasi absensi ke nomor orang tua via Fonnte.
- * @param {string} parentPhone - nomor HP/WA orang tua, contoh "0812xxxxxxx"
- * @param {string} studentName - nama siswa
- * @param {'PRESENT'|'SICK'|'IZIN'|'ALPHA'} status - status kehadiran
- * @param {Date} [date] - tanggal absensi, default sekarang
+ * Kirim pesan WhatsApp bebas (teks apa saja) ke satu nomor via Fonnte.
+ * Dipakai untuk notifikasi otomatis maupun broadcast manual oleh admin.
+ * @param {string} phone - nomor HP/WA tujuan, contoh "0812xxxxxxx"
+ * @param {string} message - isi pesan
  * @returns {Promise<{success: boolean, message: string}>}
  */
-async function sendAttendanceNotification(parentPhone, studentName, status, date = new Date()) {
-  const message = buildMessage(studentName, status, date);
-
+async function sendMessage(phone, message) {
   // Kalau API key belum diisi di .env, tetap simulasi via console.log
   // supaya tidak error saat development.
   if (!process.env.WHATSAPP_API_KEY) {
-    console.log(
-      `[NOTIF-SIMULASI] Mengirim WA ke ${parentPhone}: Siswa ${studentName} telah ${STATUS_LABEL[status]} pada ${new Date(
-        date
-      ).toLocaleDateString('id-ID')}`
-    );
+    console.log(`[NOTIF-SIMULASI] Mengirim WA ke ${phone}: ${message}`);
     return { success: true, message };
   }
 
   try {
     const body = new URLSearchParams();
-    body.append('target', parentPhone);
+    body.append('target', phone);
     body.append('message', message);
 
     const response = await fetch(process.env.WHATSAPP_API_URL || 'https://api.fonnte.com/send', {
@@ -57,13 +50,26 @@ async function sendAttendanceNotification(parentPhone, studentName, status, date
     });
 
     const data = await response.json();
-    console.log(`[NOTIF] Respons Fonnte untuk ${parentPhone}:`, data);
+    console.log(`[NOTIF] Respons Fonnte untuk ${phone}:`, data);
 
     return { success: data.status !== false, message };
   } catch (err) {
-    console.error(`[NOTIF] Gagal mengirim WA ke ${parentPhone}:`, err.message);
+    console.error(`[NOTIF] Gagal mengirim WA ke ${phone}:`, err.message);
     return { success: false, message: err.message };
   }
 }
 
-module.exports = { sendAttendanceNotification };
+/**
+ * Kirim notifikasi absensi ke nomor orang tua via Fonnte.
+ * @param {string} parentPhone - nomor HP/WA orang tua, contoh "0812xxxxxxx"
+ * @param {string} studentName - nama siswa
+ * @param {'PRESENT'|'SICK'|'IZIN'|'ALPHA'} status - status kehadiran
+ * @param {Date} [date] - tanggal absensi, default sekarang
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+async function sendAttendanceNotification(parentPhone, studentName, status, date = new Date()) {
+  const message = buildMessage(studentName, status, date);
+  return sendMessage(parentPhone, message);
+}
+
+module.exports = { sendAttendanceNotification, sendMessage };

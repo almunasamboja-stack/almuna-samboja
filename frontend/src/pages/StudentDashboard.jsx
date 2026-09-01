@@ -32,6 +32,7 @@ export default function StudentDashboard() {
   const [attendance, setAttendance] = useState(null);
   const [grades, setGrades] = useState(null);
   const [payments, setPayments] = useState(null);
+  const [assessments, setAssessments] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
@@ -50,14 +51,16 @@ export default function StudentDashboard() {
 
       if (profileData.student.status === 'APPROVED') {
         const studentId = profileData.student.id;
-        const [{ data: attData }, { data: gradeData }, { data: paymentData }] = await Promise.all([
+        const [{ data: attData }, { data: gradeData }, { data: paymentData }, { data: assessmentData }] = await Promise.all([
           api.get(`/attendance/student/${studentId}`),
           api.get(`/grades/student/${studentId}`),
           api.get(`/payments/student/${studentId}`),
+          api.get(`/assessments/student/${studentId}`),
         ]);
         setAttendance(attData);
         setGrades(gradeData);
         setPayments(paymentData.payments);
+        setAssessments(assessmentData.assessments);
       }
     } catch (err) {
       console.error(err);
@@ -146,6 +149,7 @@ export default function StudentDashboard() {
                 { key: 'absensi', label: 'Rekap Absensi' },
                 { key: 'nilai', label: 'Nilai' },
                 { key: 'spp', label: 'Riwayat SPP' },
+                { key: 'assessment', label: 'Assessment' },
               ].map((t) => (
                 <button
                   key={t.key}
@@ -392,6 +396,52 @@ export default function StudentDashboard() {
                 </div>
               ) : (
                 <p className="text-slate-400 text-sm">Data pembayaran tersedia setelah akun disetujui admin.</p>
+              )
+            )}
+
+            {/* TAB 5: ASSESSMENT */}
+            {tab === 'assessment' && (
+              assessments ? (
+                <div className="space-y-4">
+                  {assessments.length === 0 && (
+                    <p className="text-slate-400 text-sm">Belum ada laporan assessment.</p>
+                  )}
+                  {assessments.map((a) => (
+                    <div key={a.id} className="card">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="font-semibold text-navy">{MONTH_NAMES[a.periodMonth - 1]} {a.periodYear}</p>
+                          {a.courseName && <p className="text-xs text-slate-400">{a.courseName}</p>}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-navy">{a.average ?? '-'}</p>
+                          <p className="text-xs text-slate-400">Rata-rata</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
+                        {[
+                          { label: 'Speaking', value: a.speaking },
+                          { label: 'Listening', value: a.listening },
+                          { label: 'Vocabulary', value: a.vocabulary },
+                          { label: 'Reading', value: a.reading },
+                          { label: 'Grammar', value: a.grammar },
+                        ].map((item) => (
+                          <div key={item.label} className="bg-surface rounded-lg p-3 text-center">
+                            <p className="text-lg font-bold text-navy">{item.value ?? '-'}</p>
+                            <p className="text-xs text-slate-500">{item.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {a.notes && (
+                        <div className="bg-gold/10 rounded-lg px-3 py-2 text-sm text-navy">
+                          <span className="font-semibold">Catatan guru: </span>{a.notes}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-400 text-sm">Data assessment tersedia setelah akun disetujui admin.</p>
               )
             )}
           </>

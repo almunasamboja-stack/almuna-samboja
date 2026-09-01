@@ -139,4 +139,79 @@ async function deletePayment(req, res) {
   }
 }
 
-module.exports = { getAllPayments, getStudentPayments, createPayment, updatePayment, deletePayment };
+// POST /api/payments/bulk-record -> catat SPP otomatis untuk 1 bulan ke semua siswa di 1 kelas (admin)
+// body: { courseId, periodMonth, periodYear, method }
+// Melewati siswa yang SUDAH punya catatan SPP untuk kelas+periode yang sama (tidak dobel).
+async function bulkRecordPayments(req, res) {
+  try {
+    const { courseId, periodMonth, periodYear, method } = req.body;
+
+    if (!courseId || !periodMonth || !periodYear) {
+      return res.status(400).json({ message: 'Kelas, bulan, dan tahun wajib diisi' });
+    }
+
+    const course = await prisma.course.findUnique({ where: { id: Number(courseId) } });
+    if (!course) {
+      return res.status(404).json({ message: 'Kelas tidak ditemukan' });
+    }
+
+    const students = await prisma.student.findMany({
+      where: {
+        status: 'APPROVED',
+        enrollments: { some: { courseId: Number(courseId) } },
+      },
+    });
+
+    if (students.length === 0) {
+      return res.status(400).json({ message: 'Belum ada siswa disetujui di kelas ini' });
+    }
+
+    // Cek siapa saja yang sudah punya catatan SPP untuk kelas+periode ini, supaya tidak dobel
+    const existingPayments = await prisma.payment.findMany({
+      where: {
+        courseId: Number(courseId),
+        periodMonth: Number(periodMonth),
+        periodYear: Number(periodYear),
+        studentId: { in: students.map((s) => s.id) },
+      },
+      select: { studentId: true },
+    });
+    const alreadyRecordedIds = new Set(existingPayments.map((p) => p.studentId));
+
+    const toCreate = students.filter((s) => !alreadyRecordedIds.has(s.id));
+
+    if (toCreate.length > 0) {
+      await prisma.payment.createMany({
+        data: toCreate.map((s) => ({
+          studentId: s.id,
+          courseId: Number(courseId),
+          amount: course.fee,
+          periodMonth: Number(periodMonth),
+          periodYear: Number(periodYear),
+          paymentDate: new Date(),
+          method: method && ['CASH', 'TRANSFER'].includes(method) ? method : 'CASH',
+        })),
+      });
+    }
+
+    res.status(201).json({
+      message: `${toCreate.length} catatan SPP baru dibuat${
+        alreadyRecordedIds.size > 0 ? `, ${alreadyRecordedIds.size} siswa dilewati (sudah tercatat)` : ''
+      }.`,
+      created: toCreate.length,
+      skipped: alreadyRecordedIds.size,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mencatat SPP otomatis' });
+  }
+}
+
+module.exports = {
+  getAllPayments,
+  getStudentPayments,
+  createPayment,
+  updatePayment,
+  deletePayment,
+  bulkRecordPayments,
+};

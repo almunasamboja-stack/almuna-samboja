@@ -9,6 +9,8 @@ export default function AdminReports() {
   const [activeCourseId, setActiveCourseId] = useState('ALL');
   const [recap, setRecap] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [recordingSpp, setRecordingSpp] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     api.get('/courses').then(({ data }) => setCourses(data.courses)).catch(() => setCourses([]));
@@ -69,6 +71,33 @@ export default function AdminReports() {
     XLSX.writeFile(workbook, fileName);
   }
 
+  function showToast(message) {
+    setToast(message);
+    setTimeout(() => setToast(null), 3500);
+  }
+
+  async function handleRecordSpp() {
+    if (activeCourseId === 'ALL') return;
+    const now = new Date();
+    const confirmMsg = `Catat SPP bulan ${now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })} untuk semua siswa di kelas "${activeCourseName}"? Siswa yang sudah tercatat akan dilewati otomatis.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setRecordingSpp(true);
+    try {
+      const { data } = await api.post('/payments/bulk-record', {
+        courseId: activeCourseId,
+        periodMonth: now.getMonth() + 1,
+        periodYear: now.getFullYear(),
+        method: 'CASH',
+      });
+      showToast(data.message);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Gagal mencatat SPP otomatis');
+    } finally {
+      setRecordingSpp(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -78,13 +107,24 @@ export default function AdminReports() {
             <h1 className="text-2xl font-bold text-navy">Rekap Per Kelas</h1>
             <p className="text-slate-500 text-sm mt-1">Ringkasan nilai & jumlah kehadiran siswa per kelas.</p>
           </div>
-          <button
-            onClick={handleDownloadExcel}
-            disabled={recap.length === 0}
-            className="btn-primary disabled:opacity-50"
-          >
-            ⬇ Download Excel
-          </button>
+          <div className="flex gap-2">
+            {activeCourseId !== 'ALL' && (
+              <button
+                onClick={handleRecordSpp}
+                disabled={recordingSpp || recap.length === 0}
+                className="btn-outline disabled:opacity-50 whitespace-nowrap"
+              >
+                {recordingSpp ? 'Memproses...' : '💰 Catat SPP Bulan Ini'}
+              </button>
+            )}
+            <button
+              onClick={handleDownloadExcel}
+              disabled={recap.length === 0}
+              className="btn-primary disabled:opacity-50"
+            >
+              ⬇ Download Excel
+            </button>
+          </div>
         </div>
 
         {/* TAB PILIH KELAS */}
@@ -163,6 +203,12 @@ export default function AdminReports() {
           </div>
         )}
       </main>
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-navy text-white text-sm px-5 py-3 rounded-lg shadow-lg z-50">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
