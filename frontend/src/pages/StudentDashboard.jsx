@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import GradeChart from '../components/GradeChart';
+import AssessmentChart from '../components/AssessmentChart';
 import AvatarManager from '../components/AvatarManager';
 import ChangePasswordForm from '../components/ChangePasswordForm';
 import api from '../api/axios';
@@ -432,6 +433,13 @@ export default function StudentDashboard() {
                           </div>
                         ))}
                       </div>
+                      <AssessmentChart
+                        speaking={a.speaking}
+                        listening={a.listening}
+                        vocabulary={a.vocabulary}
+                        reading={a.reading}
+                        grammar={a.grammar}
+                      />
                       {a.notes && (
                         <div className="bg-gold/10 rounded-lg px-3 py-2 text-sm text-navy">
                           <span className="font-semibold">Catatan guru: </span>{a.notes}
