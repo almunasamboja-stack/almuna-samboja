@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import Navbar from '../components/Navbar';
 import AvatarManager from '../components/AvatarManager';
+import StudentCardModal from '../components/StudentCardModal';
 import api from '../api/axios';
 import { resolveImageUrl } from '../utils/media';
 
@@ -40,6 +41,7 @@ export default function AdminStudents() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [cardStudent, setCardStudent] = useState(null);
 
   useEffect(() => {
     loadStudents();
@@ -284,6 +286,9 @@ export default function AdminStudents() {
                           </button>
                         </>
                       )}
+                      <button onClick={() => setCardStudent(s)} className="text-navy font-medium hover:text-gold transition">
+                        Kartu
+                      </button>
                       <button onClick={() => openEditModal(s)} className="text-navy font-medium hover:text-gold transition">
                         Edit
                       </button>
@@ -429,6 +434,8 @@ export default function AdminStudents() {
           {toast}
         </div>
       )}
+
+      <StudentCardModal student={cardStudent} onClose={() => setCardStudent(null)} />
     </div>
   );
 }
