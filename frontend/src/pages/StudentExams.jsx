@@ -98,9 +98,18 @@ export default function StudentExams() {
                     </div>
                   )}
 
-                  <Link to={`/student-exams/${exam.id}`} className="btn-primary text-center mt-auto">
-                    {exam.lastAttempt ? 'Kerjakan Lagi' : 'Kerjakan Ujian'}
-                  </Link>
+                  {exam.canTake ? (
+                    <Link to={`/student-exams/${exam.id}`} className="btn-primary text-center mt-auto">
+                      {exam.lastAttempt ? 'Kerjakan Lagi' : 'Kerjakan Ujian'}
+                    </Link>
+                  ) : (
+                    <div className="text-center mt-auto">
+                      <button disabled className="btn-primary opacity-50 cursor-not-allowed w-full">
+                        Sudah Dikerjakan
+                      </button>
+                      <p className="text-xs text-slate-400 mt-1.5">Ujian ini hanya bisa dikerjakan satu kali.</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

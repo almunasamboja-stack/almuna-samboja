@@ -26,7 +26,7 @@ async function getAvailableExams(req, res) {
       },
       include: {
         course: { select: { name: true } },
-        attempts: { where: { studentId }, orderBy: { submittedAt: 'desc' }, take: 1 },
+        attempts: { where: { studentId }, orderBy: { submittedAt: 'desc' } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -38,6 +38,9 @@ async function getAvailableExams(req, res) {
       courseName: e.course?.name || null,
       totalQuestions: e.totalQuestions,
       durationMinutes: e.durationMinutes,
+      allowRetake: e.allowRetake,
+      // Sudah pernah dikerjakan & ujian ini hanya boleh 1x -> tidak bisa dikerjakan lagi
+      canTake: e.allowRetake || e.attempts.length === 0,
       lastAttempt: e.attempts[0]
         ? { score: e.attempts[0].score, submittedAt: e.attempts[0].submittedAt }
         : null,
@@ -68,12 +71,20 @@ async function getExamToTake(req, res) {
         totalQuestions: true,
         durationMinutes: true,
         isPublished: true,
+        allowRetake: true,
         course: { select: { name: true } },
       },
     });
 
     if (!exam || !exam.isPublished) {
       return res.status(404).json({ message: 'Ujian tidak ditemukan' });
+    }
+
+    if (!exam.allowRetake) {
+      const previousAttempt = await prisma.examAttempt.findFirst({ where: { examId: exam.id, studentId } });
+      if (previousAttempt) {
+        return res.status(403).json({ message: 'Ujian ini hanya bisa dikerjakan satu kali dan Anda sudah pernah mengerjakannya.' });
+      }
     }
 
     res.json({ exam });
@@ -101,6 +112,13 @@ async function submitExam(req, res) {
     }
     if (!Array.isArray(answers) || answers.length === 0) {
       return res.status(400).json({ message: 'Jawaban wajib diisi' });
+    }
+
+    if (!exam.allowRetake) {
+      const previousAttempt = await prisma.examAttempt.findFirst({ where: { examId: exam.id, studentId } });
+      if (previousAttempt) {
+        return res.status(403).json({ message: 'Ujian ini hanya bisa dikerjakan satu kali dan Anda sudah pernah mengerjakannya.' });
+      }
     }
 
     const keyMap = {};

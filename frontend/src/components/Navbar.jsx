@@ -48,14 +48,28 @@ export default function Navbar() {
 
           {user && user.role === 'TEACHER' && (
             <>
-              <Link to="/dashboard" className="text-sm font-medium text-navy hover:text-gold transition">
-                Absensi
-              </Link>
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen((v) => !v)}
+                  onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
+                  className="text-sm font-medium text-navy hover:text-gold transition flex items-center gap-1.5"
+                >
+                  <span aria-hidden="true">☰</span>
+                  Kelola
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-slate-100 py-2 z-50">
+                    <Link to="/dashboard" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Absensi
+                    </Link>
+                    <Link to="/grades" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Nilai Harian
+                    </Link>
+                  </div>
+                )}
+              </div>
               <Link to="/attendance-recap" className="text-sm font-medium text-navy hover:text-gold transition">
                 Rekap Absensi
-              </Link>
-              <Link to="/grades" className="text-sm font-medium text-navy hover:text-gold transition">
-                Nilai Harian
               </Link>
               <Link to="/exams" className="text-sm font-medium text-navy hover:text-gold transition">
                 Ujian Online
@@ -77,24 +91,25 @@ export default function Navbar() {
 
           {user && user.role === 'ADMIN' && (
             <>
-              <Link to="/dashboard" className="text-sm font-medium text-navy hover:text-gold transition">
-                Absensi
-              </Link>
-              <Link to="/grades" className="text-sm font-medium text-navy hover:text-gold transition">
-                Nilai Harian
-              </Link>
-
               <div className="relative">
                 <button
                   onClick={() => setMenuOpen((v) => !v)}
                   onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-                  className="text-sm font-medium text-navy hover:text-gold transition flex items-center gap-1"
+                  className="text-sm font-medium text-navy hover:text-gold transition flex items-center gap-1.5"
                 >
+                  <span aria-hidden="true">☰</span>
                   Kelola
                   <span className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`}>▾</span>
                 </button>
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-2 z-50">
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-slate-100 py-2 z-50 max-h-[80vh] overflow-y-auto">
+                    <Link to="/dashboard" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Absensi
+                    </Link>
+                    <Link to="/grades" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Nilai Harian
+                    </Link>
+                    <div className="my-1 border-t border-slate-100" />
                     <Link to="/admin/students" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Kelola Siswa
                     </Link>

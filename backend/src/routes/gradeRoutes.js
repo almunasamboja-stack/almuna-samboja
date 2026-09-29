@@ -7,13 +7,13 @@ const {
   updateGrade,
   deleteGrade,
 } = require('../controllers/gradeController');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireRole, requireApprovedStudent } = require('../middleware/auth');
 
 // GET /api/grades/class-today?courseId=X (khusus guru/admin)
 router.get('/class-today', authMiddleware, requireRole('TEACHER', 'ADMIN'), getClassDailyGrades);
 
 // GET /api/grades/student/:studentId
-router.get('/student/:studentId', authMiddleware, getStudentGrades);
+router.get('/student/:studentId', authMiddleware, requireApprovedStudent, getStudentGrades);
 
 // POST /api/grades (khusus guru/admin)
 router.post('/', authMiddleware, requireRole('TEACHER', 'ADMIN'), addGrade);

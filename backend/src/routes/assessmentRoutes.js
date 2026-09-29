@@ -5,13 +5,13 @@ const {
   upsertAssessment,
   getStudentAssessments,
 } = require('../controllers/assessmentController');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireRole, requireApprovedStudent } = require('../middleware/auth');
 
 // GET /api/assessments?month=X&year=Y&courseId=Z (admin/guru)
 router.get('/', authMiddleware, requireRole('TEACHER', 'ADMIN'), getClassAssessments);
 
 // GET /api/assessments/student/:studentId (siswa sendiri atau admin/guru)
-router.get('/student/:studentId', authMiddleware, getStudentAssessments);
+router.get('/student/:studentId', authMiddleware, requireApprovedStudent, getStudentAssessments);
 
 // PUT /api/assessments/:studentId (admin/guru)
 router.put('/:studentId', authMiddleware, requireRole('TEACHER', 'ADMIN'), upsertAssessment);

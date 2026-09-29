@@ -99,36 +99,23 @@ export default function BroadcastWA() {
           <p className="text-slate-500 text-sm mt-1">Pilih penerima, tulis pesan, kirim ke banyak wali murid sekaligus.</p>
         </div>
 
-        {/* TAB PILIH KELAS */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          <button
-            onClick={() => setActiveCourseId('ALL')}
-            className={`text-sm font-medium px-4 py-2 rounded-full border-2 transition ${
-              activeCourseId === 'ALL'
-                ? 'bg-navy border-navy text-white'
-                : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
-            }`}
+        {/* PILIH KELAS (dropdown) */}
+        <div className="mb-6 max-w-xs">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Pilih Kelas</label>
+          <select
+            value={activeCourseId}
+            onChange={(e) => setActiveCourseId(e.target.value)}
+            className="input-field w-full"
           >
-            Semua Kelas
-          </button>
-          {Object.entries(courseTabsByCategory).map(([category, list]) => (
-            <div key={category} className="contents">
-              {list.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveCourseId(String(c.id))}
-                  title={category}
-                  className={`text-sm font-medium px-4 py-2 rounded-full border-2 transition ${
-                    activeCourseId === String(c.id)
-                      ? 'bg-gold border-gold text-navy'
-                      : 'border-slate-200 text-slate-500 hover:border-gold hover:text-navy'
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          ))}
+            <option value="ALL">Semua Kelas</option>
+            {Object.entries(courseTabsByCategory).map(([category, list]) => (
+              <optgroup key={category} label={category}>
+                {list.map((c) => (
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">

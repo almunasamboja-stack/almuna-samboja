@@ -8,7 +8,7 @@ const {
   deletePayment,
   bulkRecordPayments,
 } = require('../controllers/paymentController');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireRole, requireApprovedStudent } = require('../middleware/auth');
 
 // GET /api/payments?month=X&year=Y (admin)
 router.get('/', authMiddleware, requireRole('ADMIN'), getAllPayments);
@@ -18,7 +18,7 @@ router.get('/', authMiddleware, requireRole('ADMIN'), getAllPayments);
 router.post('/bulk-record', authMiddleware, requireRole('ADMIN'), bulkRecordPayments);
 
 // GET /api/payments/student/:studentId (siswa yang bersangkutan atau admin)
-router.get('/student/:studentId', authMiddleware, getStudentPayments);
+router.get('/student/:studentId', authMiddleware, requireApprovedStudent, getStudentPayments);
 
 // POST /api/payments (admin)
 router.post('/', authMiddleware, requireRole('ADMIN'), createPayment);

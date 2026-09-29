@@ -208,6 +208,32 @@ async function updateStudentStatus(req, res) {
   }
 }
 
+// PATCH /api/students/:id/password -> admin reset/ubah password peserta kursus (khusus admin)
+// body: { newPassword }
+async function adminResetPassword(req, res) {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password baru minimal 6 karakter' });
+    }
+
+    const student = await prisma.student.findUnique({ where: { id: Number(id) } });
+    if (!student) {
+      return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id: student.userId }, data: { passwordHash } });
+
+    res.json({ message: 'Password peserta kursus berhasil diperbarui' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal memperbarui password peserta kursus' });
+  }
+}
+
 // DELETE /api/students/:id -> hapus siswa (khusus admin)
 // Menghapus User terkait akan otomatis menghapus Student, Enrollment, Attendance, dan Grade (cascade)
 async function deleteStudent(req, res) {
@@ -235,5 +261,6 @@ module.exports = {
   createStudent,
   updateStudent,
   updateStudentStatus,
+  adminResetPassword,
   deleteStudent,
 };

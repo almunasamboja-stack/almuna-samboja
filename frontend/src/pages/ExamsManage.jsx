@@ -11,6 +11,7 @@ const EMPTY_FORM = {
   courseId: '',
   totalQuestions: 10,
   durationMinutes: '',
+  allowRetake: true,
 };
 
 const ANSWER_OPTIONS = ['A', 'B', 'C', 'D'];
@@ -85,6 +86,7 @@ export default function ExamsManage() {
       courseId: exam.course?.id || '',
       totalQuestions: exam.totalQuestions,
       durationMinutes: exam.durationMinutes || '',
+      allowRetake: exam.allowRetake !== undefined ? exam.allowRetake : true,
     });
     setAnswerKeys(
       exam.answerKeys.length > 0
@@ -198,8 +200,11 @@ export default function ExamsManage() {
                 </div>
                 <h3 className="font-bold text-navy mb-1">{exam.title}</h3>
                 <p className="text-sm text-slate-500 mb-1">{exam.course?.name || 'Semua kelas'}</p>
-                <p className="text-xs text-slate-400 mb-3">
+                <p className="text-xs text-slate-400 mb-1">
                   {exam.totalQuestions} soal{exam.durationMinutes ? ` · ${exam.durationMinutes} menit` : ''} · File: {exam.driveFileName || exam.driveFileId}
+                </p>
+                <p className="text-xs text-slate-400 mb-3">
+                  {exam.allowRetake ? '🔁 Boleh dikerjakan berkali-kali' : '1️⃣ Hanya bisa dikerjakan sekali'}
                 </p>
                 <div className="flex flex-wrap gap-3 text-sm">
                   <button onClick={() => handleTogglePublish(exam)} className="text-navy font-medium hover:text-gold transition">
@@ -290,6 +295,30 @@ export default function ExamsManage() {
                     onChange={(e) => update('durationMinutes', e.target.value)}
                     placeholder="Tanpa batas"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Kesempatan Mengerjakan</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => update('allowRetake', true)}
+                    className={`flex-1 text-sm font-medium px-4 py-2 rounded-lg border-2 transition ${
+                      form.allowRetake ? 'bg-navy border-navy text-white' : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
+                    }`}
+                  >
+                    🔁 Boleh Berkali-kali
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => update('allowRetake', false)}
+                    className={`flex-1 text-sm font-medium px-4 py-2 rounded-lg border-2 transition ${
+                      !form.allowRetake ? 'bg-navy border-navy text-white' : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
+                    }`}
+                  >
+                    1️⃣ Hanya Sekali
+                  </button>
                 </div>
               </div>
 

@@ -156,6 +156,7 @@ model Exam {
   totalQuestions Int       // jumlah soal (menentukan jumlah baris kunci jawaban & form jawaban)
   durationMinutes Int?     // batas waktu pengerjaan (opsional, dalam menit)
   isPublished    Boolean   @default(false) // draft belum tampil ke siswa sampai dipublish
+  allowRetake    Boolean   @default(true) // true = siswa boleh mengerjakan berkali-kali, false = hanya sekali
   createdAt      DateTime  @default(now())
 
   answerKeys     ExamAnswerKey[]

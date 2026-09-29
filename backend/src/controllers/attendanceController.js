@@ -120,6 +120,58 @@ async function getStudentAttendance(req, res) {
   }
 }
 
+// GET /api/attendance/recap?month=M&year=Y&courseId=X -> rekap absensi 1 bulan penuh per siswa
+// (mode "per bulan" pada halaman "Rekap Absensi Per Tanggal")
+async function getAttendanceByMonth(req, res) {
+  try {
+    const { month, year, courseId } = req.query;
+    const m = Number(month);
+    const y = Number(year);
+    const start = new Date(y, m - 1, 1);
+    const end = new Date(y, m, 1);
+
+    const students = await prisma.student.findMany({
+      where: {
+        status: 'APPROVED',
+        ...(courseId ? { enrollments: { some: { courseId: Number(courseId) } } } : {}),
+      },
+      include: {
+        user: { select: { name: true, avatarUrl: true } },
+        enrollments: { include: { course: { select: { name: true } } } },
+        attendances: { where: { date: { gte: start, lt: end } }, select: { status: true } },
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    const result = students.map((s) => {
+      const present = s.attendances.filter((a) => a.status === 'PRESENT').length;
+      const sick = s.attendances.filter((a) => a.status === 'SICK').length;
+      const izin = s.attendances.filter((a) => a.status === 'IZIN').length;
+      const alpha = s.attendances.filter((a) => a.status === 'ALPHA').length;
+      const total = s.attendances.length;
+      const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+      return {
+        studentId: s.id,
+        name: s.user.name,
+        avatarUrl: s.user.avatarUrl,
+        class: s.enrollments.length > 0 ? s.enrollments.map((e) => e.course.name).join(', ') : 'Belum ada kelas',
+        present,
+        sick,
+        izin,
+        alpha,
+        total,
+        percentage,
+      };
+    });
+
+    res.json({ students: result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mengambil rekap absensi bulanan' });
+  }
+}
+
 // GET /api/attendance/recap?date=YYYY-MM-DD&courseId=X -> rekap absensi untuk 1 tanggal tertentu
 // (untuk halaman "Rekap Absensi Per Tanggal" guru/admin). courseId opsional.
 async function getAttendanceByDate(req, res) {
@@ -170,4 +222,10 @@ async function getAttendanceByDate(req, res) {
   }
 }
 
-module.exports = { getTodayAttendance, recordAttendance, getStudentAttendance, getAttendanceByDate };
+module.exports = {
+  getTodayAttendance,
+  recordAttendance,
+  getStudentAttendance,
+  getAttendanceByDate,
+  getAttendanceByMonth,
+};

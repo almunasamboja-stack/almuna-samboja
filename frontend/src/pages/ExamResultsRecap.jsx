@@ -29,6 +29,7 @@ export default function ExamResultsRecap() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [summaryOpenId, setSummaryOpenId] = useState(null); // examId ringkasan yang sedang dibuka di dropdown
 
   useEffect(() => {
     api.get('/courses').then(({ data }) => setCourses(data.courses)).catch(() => setCourses([]));
@@ -216,36 +217,23 @@ export default function ExamResultsRecap() {
           </div>
         </div>
 
-        {/* TAB PILIH PELAJARAN/KELAS */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          <button
-            onClick={() => setActiveCourseId('ALL')}
-            className={`text-sm font-medium px-4 py-2 rounded-full border-2 transition ${
-              activeCourseId === 'ALL'
-                ? 'bg-navy border-navy text-white'
-                : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
-            }`}
+        {/* PILIH PELAJARAN/KELAS (dropdown) */}
+        <div className="mb-6 max-w-xs">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Pilih Pelajaran</label>
+          <select
+            value={activeCourseId}
+            onChange={(e) => setActiveCourseId(e.target.value)}
+            className="input-field w-full"
           >
-            Semua Pelajaran
-          </button>
-          {Object.entries(courseTabsByCategory).map(([category, list]) => (
-            <div key={category} className="contents">
-              {list.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveCourseId(String(c.id))}
-                  title={category}
-                  className={`text-sm font-medium px-4 py-2 rounded-full border-2 transition ${
-                    activeCourseId === String(c.id)
-                      ? 'bg-gold border-gold text-navy'
-                      : 'border-slate-200 text-slate-500 hover:border-gold hover:text-navy'
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          ))}
+            <option value="ALL">Semua Pelajaran</option>
+            {Object.entries(courseTabsByCategory).map(([category, list]) => (
+              <optgroup key={category} label={category}>
+                {list.map((c) => (
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
         </div>
 
         {/* FILTER NAMA SISWA */}
@@ -263,26 +251,58 @@ export default function ExamResultsRecap() {
           <p className="text-slate-400">Memuat rekap...</p>
         ) : (
           <>
-            {/* RINGKASAN RATA-RATA PER UJIAN */}
+            {/* RINGKASAN RATA-RATA PER UJIAN (dropdown yang rapi) */}
             {summary.length > 0 && (
               <div className="mb-8">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Ringkasan Per Ujian</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {summary.map((s) => (
-                    <div key={s.examId} className="card !p-4">
-                      <p className="font-semibold text-navy text-sm mb-1 truncate">{s.title}</p>
-                      <p className="text-xs text-slate-400 mb-3">{s.courseName}</p>
-                      {s.totalAttempts > 0 ? (
-                        <>
-                          <p className="text-2xl font-bold text-navy">{s.average}</p>
-                          <p className="text-xs text-slate-500 mb-1">Rata-rata dari {s.totalAttempts} peserta</p>
-                          <p className="text-xs text-slate-400">Tertinggi: {s.highest} · Terendah: {s.lowest}</p>
-                        </>
-                      ) : (
-                        <p className="text-xs text-slate-400">Belum ada yang mengerjakan</p>
-                      )}
-                    </div>
-                  ))}
+                <div className="card !p-0 divide-y divide-slate-100">
+                  {summary.map((s) => {
+                    const isOpen = summaryOpenId === s.examId;
+                    return (
+                      <div key={s.examId}>
+                        <button
+                          type="button"
+                          onClick={() => setSummaryOpenId(isOpen ? null : s.examId)}
+                          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-surface transition"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-semibold text-navy text-sm truncate">{s.title}</p>
+                            <p className="text-xs text-slate-400">{s.courseName}</p>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            {s.totalAttempts > 0 ? (
+                              <span className="text-lg font-bold text-navy">{s.average}</span>
+                            ) : (
+                              <span className="text-xs text-slate-400">Belum dikerjakan</span>
+                            )}
+                            <span className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
+                          </div>
+                        </button>
+                        {isOpen && (
+                          <div className="px-4 pb-4 text-sm text-slate-600">
+                            {s.totalAttempts > 0 ? (
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="bg-surface rounded-lg px-3 py-2 text-center">
+                                  <p className="text-xs text-slate-400">Peserta</p>
+                                  <p className="font-semibold text-navy">{s.totalAttempts}</p>
+                                </div>
+                                <div className="bg-surface rounded-lg px-3 py-2 text-center">
+                                  <p className="text-xs text-slate-400">Tertinggi</p>
+                                  <p className="font-semibold text-navy">{s.highest}</p>
+                                </div>
+                                <div className="bg-surface rounded-lg px-3 py-2 text-center">
+                                  <p className="text-xs text-slate-400">Terendah</p>
+                                  <p className="font-semibold text-navy">{s.lowest}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-400">Belum ada siswa yang mengerjakan ujian ini.</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

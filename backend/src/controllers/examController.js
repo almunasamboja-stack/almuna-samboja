@@ -41,7 +41,7 @@ async function getAllExams(req, res) {
 // body: { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys: [{questionNumber, correctAnswer}] }
 async function createExam(req, res) {
   try {
-    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys } = req.body;
+    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake } = req.body;
 
     if (!title || !driveFileId || !totalQuestions) {
       return res.status(400).json({ message: 'Judul, file soal, dan jumlah soal wajib diisi' });
@@ -63,6 +63,7 @@ async function createExam(req, res) {
         courseId: courseId ? Number(courseId) : null,
         totalQuestions: Number(totalQuestions),
         durationMinutes: durationMinutes ? Number(durationMinutes) : null,
+        allowRetake: allowRetake === undefined ? true : !!allowRetake,
         answerKeys: {
           create: answerKeys.map((a) => ({
             questionNumber: Number(a.questionNumber),
@@ -84,7 +85,7 @@ async function createExam(req, res) {
 async function updateExam(req, res) {
   try {
     const { id } = req.params;
-    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys } = req.body;
+    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake } = req.body;
 
     const existing = await prisma.exam.findUnique({ where: { id: Number(id) } });
     if (!existing) {
@@ -116,6 +117,7 @@ async function updateExam(req, res) {
         courseId: courseId !== undefined ? (courseId ? Number(courseId) : null) : existing.courseId,
         totalQuestions: totalQuestions !== undefined ? Number(totalQuestions) : existing.totalQuestions,
         durationMinutes: durationMinutes !== undefined ? (durationMinutes ? Number(durationMinutes) : null) : existing.durationMinutes,
+        allowRetake: allowRetake !== undefined ? !!allowRetake : existing.allowRetake,
       },
       include: EXAM_INCLUDE_ADMIN,
     });

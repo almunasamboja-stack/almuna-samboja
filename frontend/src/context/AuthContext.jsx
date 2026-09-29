@@ -12,7 +12,25 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('as_token');
     const savedUser = localStorage.getItem('as_user');
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsed = JSON.parse(savedUser);
+      setUser(parsed);
+
+      // Untuk siswa, cek ulang status persetujuan terbaru ke server (bisa saja baru
+      // disetujui/ditolak admin sejak terakhir login), supaya tidak mengandalkan
+      // data studentStatus yang sudah usang di localStorage.
+      if (parsed.role === 'STUDENT') {
+        api
+          .get('/students/me')
+          .then(({ data }) => {
+            const latestStatus = data?.student?.status;
+            if (latestStatus && latestStatus !== parsed.studentStatus) {
+              const updated = { ...parsed, studentStatus: latestStatus };
+              localStorage.setItem('as_user', JSON.stringify(updated));
+              setUser(updated);
+            }
+          })
+          .catch(() => {});
+      }
     }
     setLoading(false);
   }, []);

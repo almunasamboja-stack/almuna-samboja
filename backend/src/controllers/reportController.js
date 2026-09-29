@@ -1,12 +1,22 @@
 // Controller rekap per kelas (nilai & kehadiran) - khusus admin
 const prisma = require('../lib/prisma');
 
-// GET /api/reports/class-recap?courseId=X -> rekap kehadiran & nilai per siswa
+// GET /api/reports/class-recap?courseId=X&month=M&year=Y -> rekap kehadiran & nilai per siswa
 // Jika courseId tidak diberikan, rekap seluruh siswa yang disetujui (semua kelas).
-// Kalau courseId diisi, ikut disertakan status pembayaran SPP bulan berjalan + nominal SPP kelas itu.
+// Kalau courseId diisi, ikut disertakan status pembayaran SPP bulan yang dipilih + nominal SPP kelas itu.
+// Jika month & year diberikan, rekap absensi/nilai hanya dihitung dari data bulan tersebut.
 async function getClassRecap(req, res) {
   try {
-    const { courseId } = req.query;
+    const { courseId, month, year } = req.query;
+
+    let dateFilter;
+    if (month && year) {
+      const m = Number(month);
+      const y = Number(year);
+      const start = new Date(y, m - 1, 1);
+      const end = new Date(y, m, 1);
+      dateFilter = { gte: start, lt: end };
+    }
 
     const students = await prisma.student.findMany({
       where: {
@@ -16,18 +26,19 @@ async function getClassRecap(req, res) {
       include: {
         user: { select: { name: true, email: true } },
         enrollments: { include: { course: { select: { id: true, name: true, category: true } } } },
-        attendances: { select: { status: true } },
-        grades: { select: { type: true, score: true } },
+        attendances: { select: { status: true, date: true }, where: dateFilter ? { date: dateFilter } : undefined },
+        grades: { select: { type: true, score: true, date: true }, where: dateFilter ? { date: dateFilter } : undefined },
       },
       orderBy: { id: 'asc' },
     });
 
-    // Kalau lagi lihat 1 kelas spesifik, cek juga siapa saja yang sudah bayar SPP bulan ini
+    // Kalau lagi lihat 1 kelas spesifik, cek juga siapa saja yang sudah bayar SPP untuk bulan yang dipilih
+    // (default: bulan berjalan, kalau month/year tidak diisi)
     let paidStudentIds = new Set();
     let courseFee = null;
     const now = new Date();
-    const periodMonth = now.getMonth() + 1;
-    const periodYear = now.getFullYear();
+    const periodMonth = month ? Number(month) : now.getMonth() + 1;
+    const periodYear = year ? Number(year) : now.getFullYear();
 
     if (courseId) {
       const course = await prisma.course.findUnique({ where: { id: Number(courseId) } });

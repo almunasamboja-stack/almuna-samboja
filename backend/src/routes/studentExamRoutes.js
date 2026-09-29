@@ -7,22 +7,22 @@ const {
   getMyAttempts,
   getAttemptDetail,
 } = require('../controllers/studentExamController');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { authMiddleware, requireRole, requireApprovedStudent } = require('../middleware/auth');
 
 // GET /api/student-exams (siswa) - daftar ujian tersedia
-router.get('/', authMiddleware, requireRole('STUDENT'), getAvailableExams);
+router.get('/', authMiddleware, requireRole('STUDENT'), requireApprovedStudent, getAvailableExams);
 
 // GET /api/student-exams/attempts/me (siswa) - riwayat hasil ujian sendiri
 // Catatan: harus didaftarkan SEBELUM /:id supaya "attempts" tidak ketangkap sebagai :id
-router.get('/attempts/me', authMiddleware, requireRole('STUDENT'), getMyAttempts);
+router.get('/attempts/me', authMiddleware, requireRole('STUDENT'), requireApprovedStudent, getMyAttempts);
 
 // GET /api/student-exams/attempts/:attemptId (siswa untuk milik sendiri, atau admin/guru)
 router.get('/attempts/:attemptId', authMiddleware, getAttemptDetail);
 
 // GET /api/student-exams/:id (siswa) - detail ujian untuk dikerjakan
-router.get('/:id', authMiddleware, requireRole('STUDENT'), getExamToTake);
+router.get('/:id', authMiddleware, requireRole('STUDENT'), requireApprovedStudent, getExamToTake);
 
 // POST /api/student-exams/:id/submit (siswa) - submit jawaban
-router.post('/:id/submit', authMiddleware, requireRole('STUDENT'), submitExam);
+router.post('/:id/submit', authMiddleware, requireRole('STUDENT'), requireApprovedStudent, submitExam);
 
 module.exports = router;

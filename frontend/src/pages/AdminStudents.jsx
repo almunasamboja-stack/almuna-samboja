@@ -42,6 +42,10 @@ export default function AdminStudents() {
   const [toast, setToast] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [cardStudent, setCardStudent] = useState(null);
+  const [passwordStudent, setPasswordStudent] = useState(null); // siswa yang sedang diubah passwordnya
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
   useEffect(() => {
     loadStudents();
@@ -162,6 +166,31 @@ export default function AdminStudents() {
       showToast(status === 'APPROVED' ? 'Pendaftar disetujui.' : 'Pendaftar ditolak.');
     } catch (err) {
       showToast(err.response?.data?.message || 'Gagal memperbarui status');
+    }
+  }
+
+  function openPasswordModal(student) {
+    setPasswordStudent(student);
+    setNewPassword('');
+    setPasswordError('');
+  }
+
+  async function handlePasswordSubmit(e) {
+    e.preventDefault();
+    setPasswordError('');
+    if (newPassword.length < 6) {
+      setPasswordError('Password baru minimal 6 karakter');
+      return;
+    }
+    setPasswordSubmitting(true);
+    try {
+      await api.patch(`/students/${passwordStudent.id}/password`, { newPassword });
+      showToast(`Password ${passwordStudent.user.name} berhasil diperbarui.`);
+      setPasswordStudent(null);
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'Gagal memperbarui password');
+    } finally {
+      setPasswordSubmitting(false);
     }
   }
 
@@ -291,6 +320,9 @@ export default function AdminStudents() {
                       </button>
                       <button onClick={() => openEditModal(s)} className="text-navy font-medium hover:text-gold transition">
                         Edit
+                      </button>
+                      <button onClick={() => openPasswordModal(s)} className="text-slate-500 font-medium hover:text-navy transition">
+                        Ubah Password
                       </button>
                       {confirmDeleteId === s.id ? (
                         <>
@@ -422,6 +454,46 @@ export default function AdminStudents() {
                 </button>
                 <button type="submit" className="flex-1 btn-primary" disabled={submitting}>
                   {submitting ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {passwordStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-navy mb-1">Ubah Password Peserta</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Atur password baru untuk <span className="font-medium text-navy">{passwordStudent.user.name}</span>.
+              Siswa akan login dengan password baru ini.
+            </p>
+
+            {passwordError && (
+              <div className="bg-red-50 text-maroon text-sm rounded-lg px-4 py-2.5 mb-4">{passwordError}</div>
+            )}
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Password Baru</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  className="input-field"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimal 6 karakter"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setPasswordStudent(null)} className="flex-1 btn-outline" disabled={passwordSubmitting}>
+                  Batal
+                </button>
+                <button type="submit" className="flex-1 btn-primary" disabled={passwordSubmitting}>
+                  {passwordSubmitting ? 'Menyimpan...' : 'Simpan Password'}
                 </button>
               </div>
             </form>
