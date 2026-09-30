@@ -42,10 +42,32 @@ export default function StudentDashboard() {
   const [saveError, setSaveError] = useState('');
   const [toast, setToast] = useState(null);
   const [receiptPayment, setReceiptPayment] = useState(null);
+  const [attendanceCourseId, setAttendanceCourseId] = useState('ALL'); // filter mata pelajaran untuk tab Rekap Absensi
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (profile?.status === 'APPROVED') {
+      loadAttendance(profile.id, attendanceCourseId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attendanceCourseId]);
+
+  async function loadAttendance(studentId, courseId) {
+    setLoadingAttendance(true);
+    try {
+      const params = courseId && courseId !== 'ALL' ? { courseId } : {};
+      const { data } = await api.get(`/attendance/student/${studentId}`, { params });
+      setAttendance(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  }
 
   async function load() {
     try {
@@ -273,10 +295,25 @@ export default function StudentDashboard() {
             {tab === 'absensi' && (
               attendance ? (
                 <div className="space-y-6">
+                  {profile?.enrollments && profile.enrollments.length > 1 && (
+                    <div className="max-w-xs">
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Mata Pelajaran</label>
+                      <select
+                        value={attendanceCourseId}
+                        onChange={(e) => setAttendanceCourseId(e.target.value)}
+                        className="input-field w-full"
+                      >
+                        <option value="ALL">Semua Pelajaran (digabung)</option>
+                        {profile.enrollments.map((e) => (
+                          <option key={e.course.id} value={String(e.course.id)}>{e.course.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="card max-w-xl">
                     <div className="flex justify-between items-center mb-2">
                       <p className="font-semibold text-navy">Kehadiran Bulan Ini</p>
-                      <p className="font-bold text-gold">{attendance.percentage}%</p>
+                      <p className="font-bold text-gold">{loadingAttendance ? '...' : `${attendance.percentage}%`}</p>
                     </div>
                     <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                       <div
@@ -295,6 +332,7 @@ export default function StudentDashboard() {
                       <thead>
                         <tr className="text-left text-slate-400 border-b border-slate-100">
                           <th className="pb-2 font-medium">Tanggal</th>
+                          {attendanceCourseId === 'ALL' && <th className="pb-2 font-medium">Mata Pelajaran</th>}
                           <th className="pb-2 font-medium">Status</th>
                         </tr>
                       </thead>
@@ -304,6 +342,9 @@ export default function StudentDashboard() {
                             <td className="py-2.5">
                               {new Date(h.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </td>
+                            {attendanceCourseId === 'ALL' && (
+                              <td className="py-2.5 text-slate-500">{h.course?.name || '-'}</td>
+                            )}
                             <td className={`py-2.5 font-medium ${STATUS_COLOR[h.status]}`}>
                               {STATUS_LABEL[h.status]}
                             </td>

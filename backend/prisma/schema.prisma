@@ -71,6 +71,7 @@ model Course {
   payments             Payment[]
   exams                Exam[]
   assessments          Assessment[]
+  attendances          Attendance[]
 
   @@map("courses")
 }
@@ -102,8 +103,14 @@ model Attendance {
   studentId Int
   student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  // Dikaitkan ke kelas/mata pelajaran tertentu, supaya 1 siswa yang ikut >1 kelas
+  // punya rekap kehadiran terpisah per pelajaran (bukan digabung jadi 1 status per hari).
+  // Nullable supaya data absensi lama (sebelum fitur ini) tetap kompatibel.
+  courseId  Int?
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
   date      DateTime @default(now())
-  status    String   // "PRESENT" | "SICK" | "ALPHA"
+  status    String   // "PRESENT" | "SICK" | "IZIN" | "ALPHA"
   notified  Boolean  @default(false) // apakah notifikasi WA berhasil dikirim
   timestamp DateTime @default(now())
 

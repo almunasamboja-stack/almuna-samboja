@@ -26,7 +26,15 @@ async function getClassRecap(req, res) {
       include: {
         user: { select: { name: true, email: true } },
         enrollments: { include: { course: { select: { id: true, name: true, category: true } } } },
-        attendances: { select: { status: true, date: true }, where: dateFilter ? { date: dateFilter } : undefined },
+        attendances: {
+          select: { status: true, date: true },
+          // Kalau lagi lihat 1 kelas spesifik, hitung absensi HANYA untuk kelas itu -
+          // supaya siswa yang ikut >1 kelas tidak tercampur rekapnya.
+          where: {
+            ...(dateFilter ? { date: dateFilter } : {}),
+            ...(courseId ? { courseId: Number(courseId) } : {}),
+          },
+        },
         grades: { select: { type: true, score: true, date: true }, where: dateFilter ? { date: dateFilter } : undefined },
       },
       orderBy: { id: 'asc' },

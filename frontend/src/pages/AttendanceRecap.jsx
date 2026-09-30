@@ -25,10 +25,10 @@ const now = new Date();
 
 export default function AttendanceRecap() {
   const [courses, setCourses] = useState([]);
-  const [activeCourseId, setActiveCourseId] = useState('ALL');
+  const [activeCourseId, setActiveCourseId] = useState(''); // '' = belum pilih kelas, wajib pilih dulu (absensi per pelajaran)
   const [date, setDate] = useState(todayInputValue());
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [monthMode, setMonthMode] = useState(false); // false = per tanggal, true = per bulan
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -38,7 +38,8 @@ export default function AttendanceRecap() {
   }, []);
 
   useEffect(() => {
-    loadRecap();
+    if (activeCourseId) loadRecap();
+    else setStudents([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, activeCourseId, monthMode, month, year]);
 
@@ -46,14 +47,10 @@ export default function AttendanceRecap() {
     setLoading(true);
     try {
       if (monthMode) {
-        const params = { month, year };
-        if (activeCourseId !== 'ALL') params.courseId = activeCourseId;
-        const { data } = await api.get('/attendance/recap-month', { params });
+        const { data } = await api.get('/attendance/recap-month', { params: { month, year, courseId: activeCourseId } });
         setStudents(data.students);
       } else {
-        const params = { date };
-        if (activeCourseId !== 'ALL') params.courseId = activeCourseId;
-        const { data } = await api.get('/attendance/recap', { params });
+        const { data } = await api.get('/attendance/recap', { params: { date, courseId: activeCourseId } });
         setStudents(data.students);
       }
     } catch (err) {
@@ -182,15 +179,15 @@ export default function AttendanceRecap() {
           )}
         </div>
 
-        {/* PILIH KELAS (dropdown) */}
+        {/* PILIH KELAS/MATA PELAJARAN (wajib, dropdown) */}
         <div className="mb-6 max-w-xs">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Pilih Kelas</label>
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Pilih Kelas / Mata Pelajaran</label>
           <select
             value={activeCourseId}
             onChange={(e) => setActiveCourseId(e.target.value)}
             className="input-field w-full"
           >
-            <option value="ALL">Semua Kelas</option>
+            <option value="">-- Pilih kelas --</option>
             {Object.entries(courseTabsByCategory).map(([category, list]) => (
               <optgroup key={category} label={category}>
                 {list.map((c) => (
@@ -201,7 +198,9 @@ export default function AttendanceRecap() {
           </select>
         </div>
 
-        {loading ? (
+        {!activeCourseId ? (
+          <p className="text-slate-400">Pilih kelas/mata pelajaran di atas untuk melihat rekap absensinya.</p>
+        ) : loading ? (
           <p className="text-slate-400">Memuat rekap...</p>
         ) : (
           <div className="card overflow-x-auto">

@@ -9,9 +9,9 @@ import { useAuth } from '../context/AuthContext';
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
-  const [activeCourseId, setActiveCourseId] = useState('ALL'); // 'ALL' atau id kursus (string)
+  const [activeCourseId, setActiveCourseId] = useState(''); // '' = belum pilih kelas, wajib pilih dulu
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
@@ -21,14 +21,14 @@ export default function TeacherDashboard() {
   }, []);
 
   useEffect(() => {
-    loadStudents(activeCourseId);
+    if (activeCourseId) loadStudents(activeCourseId);
+    else setStudents([]);
   }, [activeCourseId]);
 
   async function loadStudents(courseId) {
     setLoading(true);
     try {
-      const params = courseId && courseId !== 'ALL' ? { courseId } : {};
-      const { data } = await api.get('/attendance/today', { params });
+      const { data } = await api.get('/attendance/today', { params: { courseId } });
       setStudents(data.students);
     } catch (err) {
       console.error(err);
@@ -40,7 +40,7 @@ export default function TeacherDashboard() {
   async function handleSubmit(studentId, status, notify) {
     setSubmitting(true);
     try {
-      const { data } = await api.post('/attendance', { studentId, status, notify });
+      const { data } = await api.post('/attendance', { studentId, courseId: activeCourseId, status, notify });
       setStudents((prev) =>
         prev.map((s) => (s.studentId === studentId ? { ...s, status } : s))
       );
@@ -77,7 +77,7 @@ export default function TeacherDashboard() {
             <h1 className="text-2xl font-bold text-navy">Absensi Hari Ini</h1>
             <p className="text-slate-500 text-sm mt-1">
               {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              {user?.role === 'ADMIN' && ' · Tampilan admin: bisa pilih kelas mana pun untuk diabsen/dipantau.'}
+              {' · Absensi dicatat per mata pelajaran, jadi pilih kelasnya dulu.'}
             </p>
           </div>
           <div className="flex gap-3 text-sm">
@@ -96,49 +96,31 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
-        {/* PILIHAN / TAB KELAS */}
-        <div className="mb-6">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Pilih Kelas</p>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setActiveCourseId('ALL')}
-              className={`text-sm font-medium px-4 py-2 rounded-full border-2 transition ${
-                activeCourseId === 'ALL'
-                  ? 'bg-navy border-navy text-white'
-                  : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
-              }`}
-            >
-              Semua Kelas
-            </button>
+        {/* PILIH KELAS/MATA PELAJARAN (wajib, dropdown) */}
+        <div className="mb-6 max-w-xs">
+          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Pilih Kelas / Mata Pelajaran</label>
+          <select
+            value={activeCourseId}
+            onChange={(e) => setActiveCourseId(e.target.value)}
+            className="input-field w-full"
+          >
+            <option value="">-- Pilih kelas untuk mulai absen --</option>
             {Object.entries(courseTabsByCategory).map(([category, list]) => (
-              <div key={category} className="contents">
+              <optgroup key={category} label={category}>
                 {list.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setActiveCourseId(String(c.id))}
-                    title={category}
-                    className={`text-sm font-medium px-4 py-2 rounded-full border-2 transition ${
-                      activeCourseId === String(c.id)
-                        ? 'bg-gold border-gold text-navy'
-                        : 'border-slate-200 text-slate-500 hover:border-gold hover:text-navy'
-                    }`}
-                  >
-                    {c.name}
-                  </button>
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
                 ))}
-              </div>
+              </optgroup>
             ))}
-          </div>
+          </select>
         </div>
 
-        {loading ? (
+        {!activeCourseId ? (
+          <p className="text-slate-400">Pilih kelas/mata pelajaran di atas untuk mulai mengambil absensi.</p>
+        ) : loading ? (
           <p className="text-slate-400">Memuat data siswa...</p>
         ) : students.length === 0 ? (
-          <p className="text-slate-400">
-            {activeCourseId === 'ALL'
-              ? 'Belum ada siswa yang disetujui. Jalankan seeder atau setujui pendaftar di Kelola Siswa.'
-              : 'Belum ada siswa disetujui di kelas ini.'}
-          </p>
+          <p className="text-slate-400">Belum ada siswa disetujui di kelas ini.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {students.map((s) => (
