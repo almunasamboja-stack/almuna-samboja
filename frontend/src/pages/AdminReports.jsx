@@ -73,6 +73,7 @@ export default function AdminReports() {
       '% Kehadiran': r.attendancePercentage,
       'Rata-rata Nilai Harian': r.dailyAverage ?? '-',
       'Rata-rata Nilai Bulanan': r.monthlyAverage ?? '-',
+      'Rata-rata Nilai Ujian': r.examAverage ?? '-',
       ...(activeCourseId !== 'ALL' ? { 'Status SPP Bulan Ini': r.paymentStatus === 'PAID' ? 'Sudah Bayar' : 'Belum Bayar' } : {}),
     }));
 
@@ -80,7 +81,7 @@ export default function AdminReports() {
     worksheet['!cols'] = [
       { wch: 22 }, { wch: 26 }, { wch: 22 }, { wch: 16 },
       { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 20 },
-      { wch: 12 }, { wch: 20 }, { wch: 20 },
+      { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 18 },
     ];
 
     const workbook = XLSX.utils.book_new();
@@ -223,7 +224,7 @@ export default function AdminReports() {
           <p className="text-slate-400">Memuat rekap...</p>
         ) : (
           <div className="card overflow-x-auto">
-            <table className="w-full text-sm min-w-[960px]">
+            <table className="w-full text-sm min-w-[1060px]">
               <thead>
                 <tr className="text-left text-slate-400 border-b border-slate-100">
                   <th className="pb-3 font-medium">Nama</th>
@@ -235,6 +236,7 @@ export default function AdminReports() {
                   <th className="pb-3 font-medium text-center">% Kehadiran</th>
                   <th className="pb-3 font-medium text-center">Rata Nilai Harian</th>
                   <th className="pb-3 font-medium text-center">Rata Nilai Bulanan</th>
+                  <th className="pb-3 font-medium text-center">Rata Nilai Ujian</th>
                   {activeCourseId !== 'ALL' && (
                     <>
                       <th className="pb-3 font-medium text-center">Status SPP</th>
@@ -255,6 +257,7 @@ export default function AdminReports() {
                     <td className="py-3 text-center font-semibold text-navy">{r.attendancePercentage}%</td>
                     <td className="py-3 text-center">{r.dailyAverage ?? '-'}</td>
                     <td className="py-3 text-center">{r.monthlyAverage ?? '-'}</td>
+                    <td className="py-3 text-center font-semibold text-navy">{r.examAverage ?? '-'}</td>
                     {activeCourseId !== 'ALL' && (
                       <>
                         <td className="py-3 text-center">
@@ -281,7 +284,7 @@ export default function AdminReports() {
                 ))}
                 {recap.length === 0 && (
                   <tr>
-                    <td colSpan={activeCourseId === 'ALL' ? 9 : 10} className="py-6 text-center text-slate-400">
+                    <td colSpan={activeCourseId === 'ALL' ? 10 : 11} className="py-6 text-center text-slate-400">
                       Belum ada data siswa pada kelas ini.
                     </td>
                   </tr>

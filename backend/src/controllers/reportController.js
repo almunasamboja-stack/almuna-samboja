@@ -36,6 +36,15 @@ async function getClassRecap(req, res) {
           },
         },
         grades: { select: { type: true, score: true, date: true }, where: dateFilter ? { date: dateFilter } : undefined },
+        // Nilai ujian online siswa ini, dipakai untuk kolom "Rata Nilai Ujian".
+        // Kalau lagi lihat 1 kelas spesifik, hanya hitung ujian dari kelas itu (sama seperti absensi).
+        examAttempts: {
+          select: { score: true },
+          where: {
+            ...(dateFilter ? { submittedAt: dateFilter } : {}),
+            ...(courseId ? { exam: { courseId: Number(courseId) } } : {}),
+          },
+        },
       },
       orderBy: { id: 'asc' },
     });
@@ -83,6 +92,11 @@ async function getClassRecap(req, res) {
           ? Math.round((monthlyGrades.reduce((sum, g) => sum + g.score, 0) / monthlyGrades.length) * 10) / 10
           : null;
 
+      const examAverage =
+        s.examAttempts.length > 0
+          ? Math.round((s.examAttempts.reduce((sum, a) => sum + a.score, 0) / s.examAttempts.length) * 10) / 10
+          : null;
+
       return {
         studentId: s.id,
         name: s.user.name,
@@ -98,6 +112,7 @@ async function getClassRecap(req, res) {
         attendancePercentage,
         dailyAverage,
         monthlyAverage,
+        examAverage,
         ...(courseId
           ? {
               paymentStatus: paidStudentIds.has(s.id) ? 'PAID' : 'UNPAID',
