@@ -13,6 +13,7 @@ import AdminReports from './pages/AdminReports';
 import AdminPayments from './pages/AdminPayments';
 import BroadcastWA from './pages/BroadcastWA';
 import AssessmentManage from './pages/AssessmentManage';
+import ViolationsManage from './pages/ViolationsManage';
 import ExamsManage from './pages/ExamsManage';
 import ExamResultsRecap from './pages/ExamResultsRecap';
 import StudentExams from './pages/StudentExams';
@@ -177,6 +178,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
             <AssessmentManage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/violations"
+        element={
+          <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+            <ViolationsManage />
           </ProtectedRoute>
         }
       />

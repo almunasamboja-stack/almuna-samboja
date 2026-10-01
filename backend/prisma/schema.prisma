@@ -50,6 +50,7 @@ model Student {
   payments    Payment[]
   examAttempts ExamAttempt[]
   assessments Assessment[]
+  violations  Violation[]
 
   createdAt   DateTime @default(now())
 
@@ -72,6 +73,7 @@ model Course {
   exams                Exam[]
   assessments          Assessment[]
   attendances          Attendance[]
+  violations           Violation[]
 
   @@map("courses")
 }
@@ -237,4 +239,38 @@ model Assessment {
 
   @@unique([studentId, periodMonth, periodYear]) // 1 siswa cuma 1 laporan per bulan
   @@map("assessments")
+}
+
+// Jenis-jenis pelanggaran bahasa (misal: "Bicara Bahasa Indonesia saat Jam Wajib Bahasa Asing",
+// "Tidak Mengikuti Mufrodat/Vocabulary Harian"), dikelola admin: bisa tambah, edit, hapus.
+// Tiap jenis pelanggaran punya keterangan sendiri.
+model ViolationType {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String?     // keterangan pelanggaran ini (opsional)
+  violations  Violation[]
+  createdAt   DateTime    @default(now())
+
+  @@map("violation_types")
+}
+
+// Catatan pelanggaran bahasa per siswa. Dicatat lewat halaman checklist: pilih kelas & tanggal,
+// lalu centang/hapus centang jenis pelanggaran untuk tiap siswa di kelas itu.
+model Violation {
+  id              Int           @id @default(autoincrement())
+  studentId       Int
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  violationTypeId Int
+  violationType   ViolationType @relation(fields: [violationTypeId], references: [id], onDelete: Cascade)
+
+  // Kelas saat pelanggaran dicatat (opsional) - dipakai untuk menampilkan daftar siswa per kelas
+  // di halaman checklist, sama seperti pola di halaman absensi.
+  courseId        Int?
+  course          Course?       @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  date            DateTime      @default(now()) // tanggal kejadian pelanggaran (disimpan tanpa jam, jam 00:00)
+  notes           String?       // catatan tambahan khusus kejadian ini (opsional)
+  createdAt       DateTime      @default(now())
+
+  @@map("violations")
 }

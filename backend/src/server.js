@@ -17,6 +17,7 @@ const examRoutes = require('./routes/examRoutes');
 const studentExamRoutes = require('./routes/studentExamRoutes');
 const broadcastRoutes = require('./routes/broadcastRoutes');
 const assessmentRoutes = require('./routes/assessmentRoutes');
+const violationRoutes = require('./routes/violationRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -53,6 +54,7 @@ app.use('/api/exams', examRoutes);
 app.use('/api/student-exams', studentExamRoutes);
 app.use('/api/broadcast', broadcastRoutes);
 app.use('/api/assessments', assessmentRoutes);
+app.use('/api/violations', violationRoutes);
 
 // 404 handler
 app.use((req, res) => {

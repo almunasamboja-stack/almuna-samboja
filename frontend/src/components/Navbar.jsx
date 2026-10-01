@@ -80,6 +80,9 @@ export default function Navbar() {
               <Link to="/assessments" className="text-sm font-medium text-navy hover:text-gold transition">
                 Assessment
               </Link>
+              <Link to="/violations" className="text-sm font-medium text-navy hover:text-gold transition">
+                Pelanggaran Bahasa
+              </Link>
               <Link to="/profile" className="text-sm font-medium text-navy hover:text-gold transition">
                 Profil Saya
               </Link>
@@ -139,6 +142,9 @@ export default function Navbar() {
                     </Link>
                     <Link to="/assessments" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Assessment
+                    </Link>
+                    <Link to="/violations" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Pelanggaran Bahasa
                     </Link>
                     <Link to="/profile" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Profil Saya
