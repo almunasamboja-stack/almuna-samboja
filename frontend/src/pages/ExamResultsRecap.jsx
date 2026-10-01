@@ -14,6 +14,7 @@ function SortIcon({ active, direction }) {
 export default function ExamResultsRecap() {
   const [courses, setCourses] = useState([]);
   const [activeCourseId, setActiveCourseId] = useState('ALL');
+  const [activeExamId, setActiveExamId] = useState('ALL'); // filter + ringkasan 1 ujian tertentu lewat dropdown
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [attempts, setAttempts] = useState([]);
@@ -31,7 +32,6 @@ export default function ExamResultsRecap() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [summaryOpenId, setSummaryOpenId] = useState(null); // examId ringkasan yang sedang dibuka di dropdown
 
   useEffect(() => {
     api.get('/courses').then(({ data }) => setCourses(data.courses)).catch(() => setCourses([]));
@@ -39,22 +39,30 @@ export default function ExamResultsRecap() {
     api.get('/exams').then(({ data }) => setExams(data.exams)).catch(() => setExams([]));
   }, []);
 
+  // Kalau ganti pelajaran, ujian yang kepilih sebelumnya mungkin sudah tidak relevan (beda pelajaran) -> reset ke "Semua Ujian"
+  useEffect(() => {
+    setActiveExamId('ALL');
+  }, [activeCourseId]);
+
   useEffect(() => {
     loadRecap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCourseId, dateFrom, dateTo]);
+  }, [activeCourseId, activeExamId, dateFrom, dateTo]);
 
   async function loadRecap() {
     setLoading(true);
     try {
-      const params = {
+      // params dasar (pelajaran + rentang tanggal) dipakai bersama; examId HANYA untuk tabel detail,
+      // supaya dropdown "Pilih Ujian" tetap menampilkan semua ujian meski salah satunya sedang difilter.
+      const baseParams = {
         ...(activeCourseId !== 'ALL' ? { courseId: activeCourseId } : {}),
         ...(dateFrom ? { dateFrom } : {}),
         ...(dateTo ? { dateTo } : {}),
       };
+      const recapParams = { ...baseParams, ...(activeExamId !== 'ALL' ? { examId: activeExamId } : {}) };
       const [{ data: recapData }, { data: summaryData }] = await Promise.all([
-        api.get('/exams/results-recap', { params }),
-        api.get('/exams/summary', { params }),
+        api.get('/exams/results-recap', { params: recapParams }),
+        api.get('/exams/summary', { params: baseParams }),
       ]);
       setAttempts(recapData.attempts);
       setSummary(summaryData.summary);
@@ -199,8 +207,9 @@ export default function ExamResultsRecap() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Nilai Ujian');
 
     const labelPelajaran = activeCourseId === 'ALL' ? 'Semua-Pelajaran' : (courses.find((c) => String(c.id) === activeCourseId)?.name || 'Pelajaran').replace(/\s+/g, '-');
+    const labelUjian = activeExamId !== 'ALL' ? `_${(summary.find((s) => String(s.examId) === activeExamId)?.title || 'Ujian').replace(/\s+/g, '-')}` : '';
     const labelTanggal = dateFrom || dateTo ? `_${dateFrom || 'awal'}_sd_${dateTo || 'sekarang'}` : '';
-    XLSX.writeFile(workbook, `Rekap-Nilai-Ujian-${labelPelajaran}${labelTanggal}.xlsx`);
+    XLSX.writeFile(workbook, `Rekap-Nilai-Ujian-${labelPelajaran}${labelUjian}${labelTanggal}.xlsx`);
   }
 
   const columns = [
@@ -230,23 +239,38 @@ export default function ExamResultsRecap() {
           </div>
         </div>
 
-        {/* PILIH PELAJARAN/KELAS (dropdown) */}
-        <div className="mb-6 max-w-xs">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Pilih Pelajaran</label>
-          <select
-            value={activeCourseId}
-            onChange={(e) => setActiveCourseId(e.target.value)}
-            className="input-field w-full"
-          >
-            <option value="ALL">Semua Pelajaran</option>
-            {Object.entries(courseTabsByCategory).map(([category, list]) => (
-              <optgroup key={category} label={category}>
-                {list.map((c) => (
-                  <option key={c.id} value={String(c.id)}>{c.name}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+        {/* PILIH PELAJARAN/KELAS & PILIH UJIAN (dropdown berdampingan) */}
+        <div className="mb-6 flex flex-wrap gap-4">
+          <div className="w-full sm:w-64">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Pilih Pelajaran</label>
+            <select
+              value={activeCourseId}
+              onChange={(e) => setActiveCourseId(e.target.value)}
+              className="input-field w-full"
+            >
+              <option value="ALL">Semua Pelajaran</option>
+              {Object.entries(courseTabsByCategory).map(([category, list]) => (
+                <optgroup key={category} label={category}>
+                  {list.map((c) => (
+                    <option key={c.id} value={String(c.id)}>{c.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+          <div className="w-full sm:w-64">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Pilih Ujian</label>
+            <select
+              value={activeExamId}
+              onChange={(e) => setActiveExamId(e.target.value)}
+              className="input-field w-full"
+            >
+              <option value="ALL">Semua Ujian</option>
+              {summary.map((s) => (
+                <option key={s.examId} value={String(s.examId)}>{s.title}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* FILTER RENTANG TANGGAL PENGERJAAN */}
@@ -293,59 +317,48 @@ export default function ExamResultsRecap() {
           <p className="text-slate-400">Memuat rekap...</p>
         ) : (
           <>
-            {/* RINGKASAN RATA-RATA PER UJIAN (dropdown yang rapi) */}
+            {/* RINGKASAN UJIAN - mengikuti dropdown "Pilih Ujian" di atas, jadi semua ujian bisa diakses dari 1 dropdown */}
             {summary.length > 0 && (
               <div className="mb-8">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Ringkasan Per Ujian</p>
-                <div className="card !p-0 divide-y divide-slate-100">
-                  {summary.map((s) => {
-                    const isOpen = summaryOpenId === s.examId;
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Ringkasan Ujian</p>
+                {activeExamId === 'ALL' ? (
+                  <p className="text-sm text-slate-400">
+                    Pilih salah satu ujian di dropdown "Pilih Ujian" di atas untuk lihat ringkasannya (jumlah peserta, rata-rata, nilai tertinggi & terendah).
+                  </p>
+                ) : (
+                  (() => {
+                    const s = summary.find((item) => String(item.examId) === activeExamId);
+                    if (!s) return <p className="text-sm text-slate-400">Ujian tidak ditemukan.</p>;
                     return (
-                      <div key={s.examId}>
-                        <button
-                          type="button"
-                          onClick={() => setSummaryOpenId(isOpen ? null : s.examId)}
-                          className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-surface transition"
-                        >
-                          <div className="min-w-0">
-                            <p className="font-semibold text-navy text-sm truncate">{s.title}</p>
-                            <p className="text-xs text-slate-400">{s.courseName}</p>
+                      <div className="card">
+                        <p className="font-semibold text-navy">{s.title}</p>
+                        <p className="text-xs text-slate-400 mb-3">{s.courseName}</p>
+                        {s.totalAttempts > 0 ? (
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="bg-surface rounded-lg px-3 py-2 text-center">
+                              <p className="text-xs text-slate-400">Peserta</p>
+                              <p className="font-semibold text-navy">{s.totalAttempts}</p>
+                            </div>
+                            <div className="bg-surface rounded-lg px-3 py-2 text-center">
+                              <p className="text-xs text-slate-400">Rata-rata</p>
+                              <p className="font-semibold text-navy">{s.average}</p>
+                            </div>
+                            <div className="bg-surface rounded-lg px-3 py-2 text-center">
+                              <p className="text-xs text-slate-400">Tertinggi</p>
+                              <p className="font-semibold text-navy">{s.highest}</p>
+                            </div>
+                            <div className="bg-surface rounded-lg px-3 py-2 text-center">
+                              <p className="text-xs text-slate-400">Terendah</p>
+                              <p className="font-semibold text-navy">{s.lowest}</p>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            {s.totalAttempts > 0 ? (
-                              <span className="text-lg font-bold text-navy">{s.average}</span>
-                            ) : (
-                              <span className="text-xs text-slate-400">Belum dikerjakan</span>
-                            )}
-                            <span className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
-                          </div>
-                        </button>
-                        {isOpen && (
-                          <div className="px-4 pb-4 text-sm text-slate-600">
-                            {s.totalAttempts > 0 ? (
-                              <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-surface rounded-lg px-3 py-2 text-center">
-                                  <p className="text-xs text-slate-400">Peserta</p>
-                                  <p className="font-semibold text-navy">{s.totalAttempts}</p>
-                                </div>
-                                <div className="bg-surface rounded-lg px-3 py-2 text-center">
-                                  <p className="text-xs text-slate-400">Tertinggi</p>
-                                  <p className="font-semibold text-navy">{s.highest}</p>
-                                </div>
-                                <div className="bg-surface rounded-lg px-3 py-2 text-center">
-                                  <p className="text-xs text-slate-400">Terendah</p>
-                                  <p className="font-semibold text-navy">{s.lowest}</p>
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-xs text-slate-400">Belum ada siswa yang mengerjakan ujian ini.</p>
-                            )}
-                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400">Belum ada siswa yang mengerjakan ujian ini.</p>
                         )}
                       </div>
                     );
-                  })}
-                </div>
+                  })()
+                )}
               </div>
             )}
 
@@ -400,7 +413,9 @@ export default function ExamResultsRecap() {
                     <tr>
                       <td colSpan={7} className="py-6 text-center text-slate-400">
                         {searchName
-                          ? `Tidak ada siswa bernama "${searchName}" pada pelajaran ini.`
+                          ? `Tidak ada siswa bernama "${searchName}" pada ujian/pelajaran ini.`
+                          : activeExamId !== 'ALL'
+                          ? 'Belum ada siswa yang mengerjakan ujian ini.'
                           : dateFrom || dateTo
                           ? 'Tidak ada hasil ujian pada rentang tanggal yang dipilih.'
                           : 'Belum ada hasil ujian untuk pelajaran ini.'}

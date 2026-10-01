@@ -198,16 +198,17 @@ function buildSubmittedAtFilter(dateFrom, dateTo) {
   return filter;
 }
 
-// GET /api/exams/results-recap?courseId=X&dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
-// -> rekap nilai ujian per anak, difilter per pelajaran/kelas dan/atau rentang tanggal pengerjaan (admin/guru)
+// GET /api/exams/results-recap?courseId=X&examId=Y&dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+// -> rekap nilai ujian per anak, difilter per pelajaran/kelas, per ujian tertentu, dan/atau rentang tanggal pengerjaan (admin/guru)
 async function getExamResultsRecap(req, res) {
   try {
-    const { courseId, dateFrom, dateTo } = req.query;
+    const { courseId, examId, dateFrom, dateTo } = req.query;
     const submittedAtFilter = buildSubmittedAtFilter(dateFrom, dateTo);
 
     const attempts = await prisma.examAttempt.findMany({
       where: {
         ...(courseId ? { exam: { courseId: Number(courseId) } } : {}),
+        ...(examId ? { examId: Number(examId) } : {}),
         ...(submittedAtFilter ? { submittedAt: submittedAtFilter } : {}),
       },
       include: {
@@ -221,6 +222,7 @@ async function getExamResultsRecap(req, res) {
       attemptId: a.id,
       studentId: a.studentId,
       studentName: a.student.user.name,
+      examId: a.examId,
       examTitle: a.exam.title,
       courseName: a.exam.course?.name || 'Semua Kelas',
       courseCategory: a.exam.course?.category || '-',
