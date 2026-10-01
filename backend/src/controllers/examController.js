@@ -180,14 +180,35 @@ async function getExamAttempts(req, res) {
   }
 }
 
-// GET /api/exams/results-recap?courseId=X -> rekap nilai ujian per anak, difilter per pelajaran/kelas (admin/guru)
+// Bangun filter tanggal submittedAt dari query dateFrom/dateTo (format YYYY-MM-DD), dipakai
+// bersama oleh rekap nilai ujian & ringkasan per ujian supaya konsisten.
+function buildSubmittedAtFilter(dateFrom, dateTo) {
+  if (!dateFrom && !dateTo) return undefined;
+  const filter = {};
+  if (dateFrom) {
+    const start = new Date(dateFrom);
+    start.setHours(0, 0, 0, 0);
+    filter.gte = start;
+  }
+  if (dateTo) {
+    const end = new Date(dateTo);
+    end.setHours(23, 59, 59, 999);
+    filter.lte = end;
+  }
+  return filter;
+}
+
+// GET /api/exams/results-recap?courseId=X&dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+// -> rekap nilai ujian per anak, difilter per pelajaran/kelas dan/atau rentang tanggal pengerjaan (admin/guru)
 async function getExamResultsRecap(req, res) {
   try {
-    const { courseId } = req.query;
+    const { courseId, dateFrom, dateTo } = req.query;
+    const submittedAtFilter = buildSubmittedAtFilter(dateFrom, dateTo);
 
     const attempts = await prisma.examAttempt.findMany({
       where: {
         ...(courseId ? { exam: { courseId: Number(courseId) } } : {}),
+        ...(submittedAtFilter ? { submittedAt: submittedAtFilter } : {}),
       },
       include: {
         student: { include: { user: { select: { name: true } } } },
@@ -216,10 +237,13 @@ async function getExamResultsRecap(req, res) {
   }
 }
 
-// GET /api/exams/summary?courseId=X -> ringkasan rata-rata nilai PER UJIAN yang diadakan (admin/guru)
+// GET /api/exams/summary?courseId=X&dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+// -> ringkasan rata-rata nilai PER UJIAN yang diadakan, dihitung hanya dari pengerjaan
+// dalam rentang tanggal yang dipilih (kalau diisi) (admin/guru)
 async function getExamSummary(req, res) {
   try {
-    const { courseId } = req.query;
+    const { courseId, dateFrom, dateTo } = req.query;
+    const submittedAtFilter = buildSubmittedAtFilter(dateFrom, dateTo);
 
     const exams = await prisma.exam.findMany({
       where: {
@@ -227,7 +251,10 @@ async function getExamSummary(req, res) {
       },
       include: {
         course: { select: { name: true } },
-        attempts: { select: { score: true } },
+        attempts: {
+          select: { score: true },
+          where: submittedAtFilter ? { submittedAt: submittedAtFilter } : undefined,
+        },
       },
       orderBy: { createdAt: 'desc' },
     });

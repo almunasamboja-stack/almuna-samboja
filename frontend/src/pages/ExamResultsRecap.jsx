@@ -14,6 +14,8 @@ function SortIcon({ active, direction }) {
 export default function ExamResultsRecap() {
   const [courses, setCourses] = useState([]);
   const [activeCourseId, setActiveCourseId] = useState('ALL');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [attempts, setAttempts] = useState([]);
   const [summary, setSummary] = useState([]);
   const [students, setStudents] = useState([]);
@@ -39,12 +41,17 @@ export default function ExamResultsRecap() {
 
   useEffect(() => {
     loadRecap();
-  }, [activeCourseId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCourseId, dateFrom, dateTo]);
 
   async function loadRecap() {
     setLoading(true);
     try {
-      const params = activeCourseId !== 'ALL' ? { courseId: activeCourseId } : {};
+      const params = {
+        ...(activeCourseId !== 'ALL' ? { courseId: activeCourseId } : {}),
+        ...(dateFrom ? { dateFrom } : {}),
+        ...(dateTo ? { dateTo } : {}),
+      };
       const [{ data: recapData }, { data: summaryData }] = await Promise.all([
         api.get('/exams/results-recap', { params }),
         api.get('/exams/summary', { params }),
@@ -56,6 +63,11 @@ export default function ExamResultsRecap() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function resetDateFilter() {
+    setDateFrom('');
+    setDateTo('');
   }
 
   function showToast(message) {
@@ -187,7 +199,8 @@ export default function ExamResultsRecap() {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Rekap Nilai Ujian');
 
     const labelPelajaran = activeCourseId === 'ALL' ? 'Semua-Pelajaran' : (courses.find((c) => String(c.id) === activeCourseId)?.name || 'Pelajaran').replace(/\s+/g, '-');
-    XLSX.writeFile(workbook, `Rekap-Nilai-Ujian-${labelPelajaran}.xlsx`);
+    const labelTanggal = dateFrom || dateTo ? `_${dateFrom || 'awal'}_sd_${dateTo || 'sekarang'}` : '';
+    XLSX.writeFile(workbook, `Rekap-Nilai-Ujian-${labelPelajaran}${labelTanggal}.xlsx`);
   }
 
   const columns = [
@@ -205,7 +218,7 @@ export default function ExamResultsRecap() {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-navy">Rekap Nilai Ujian</h1>
-            <p className="text-slate-500 text-sm mt-1">Hasil ujian tiap siswa, difilter per pelajaran/kelas.</p>
+            <p className="text-slate-500 text-sm mt-1">Hasil ujian tiap siswa, difilter per pelajaran/kelas dan rentang tanggal pengerjaan.</p>
           </div>
           <div className="flex gap-2">
             <button onClick={handleDownloadExcel} disabled={attempts.length === 0} className="btn-outline disabled:opacity-50">
@@ -234,6 +247,35 @@ export default function ExamResultsRecap() {
               </optgroup>
             ))}
           </select>
+        </div>
+
+        {/* FILTER RENTANG TANGGAL PENGERJAAN */}
+        <div className="mb-6 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Dari Tanggal</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              max={dateTo || undefined}
+              className="input-field !w-auto"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wide block mb-1">Sampai Tanggal</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              min={dateFrom || undefined}
+              className="input-field !w-auto"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <button type="button" onClick={resetDateFilter} className="btn-outline !py-2 whitespace-nowrap">
+              ✕ Reset Tanggal
+            </button>
+          )}
         </div>
 
         {/* FILTER NAMA SISWA */}
@@ -359,6 +401,8 @@ export default function ExamResultsRecap() {
                       <td colSpan={7} className="py-6 text-center text-slate-400">
                         {searchName
                           ? `Tidak ada siswa bernama "${searchName}" pada pelajaran ini.`
+                          : dateFrom || dateTo
+                          ? 'Tidak ada hasil ujian pada rentang tanggal yang dipilih.'
                           : 'Belum ada hasil ujian untuk pelajaran ini.'}
                       </td>
                     </tr>
