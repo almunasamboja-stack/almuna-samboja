@@ -74,6 +74,7 @@ model Course {
   assessments          Assessment[]
   attendances          Attendance[]
   violations           Violation[]
+  expenses             Expense[]
 
   @@map("courses")
 }
@@ -273,4 +274,20 @@ model Violation {
   createdAt       DateTime      @default(now())
 
   @@map("violations")
+}
+
+// Pengeluaran untuk kebutuhan kursus (ATK, operasional, sewa, gaji, dll), dikelola admin.
+// Opsional dikaitkan ke 1 kelas tertentu, supaya bisa lihat pengeluaran per kelas kalau perlu.
+model Expense {
+  id          Int      @id @default(autoincrement())
+  title       String   // keperluan/nama pengeluaran, misal "Beli Spidol & Kertas HVS"
+  category    String   @default("Umum") // kategori bebas, misal "ATK", "Operasional", "Sewa", "Gaji"
+  amount      Int      // jumlah dalam Rupiah
+  courseId    Int?
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  date        DateTime @default(now()) // tanggal pengeluaran terjadi
+  notes       String?  // catatan tambahan (opsional)
+  createdAt   DateTime @default(now())
+
+  @@map("expenses")
 }
