@@ -14,6 +14,7 @@ import AdminPayments from './pages/AdminPayments';
 import BroadcastWA from './pages/BroadcastWA';
 import AssessmentManage from './pages/AssessmentManage';
 import ViolationsManage from './pages/ViolationsManage';
+import AdminExpenses from './pages/AdminExpenses';
 import ExamsManage from './pages/ExamsManage';
 import ExamResultsRecap from './pages/ExamResultsRecap';
 import StudentExams from './pages/StudentExams';
@@ -187,6 +188,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
             <ViolationsManage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/expenses"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminExpenses />
           </ProtectedRoute>
         }
       />

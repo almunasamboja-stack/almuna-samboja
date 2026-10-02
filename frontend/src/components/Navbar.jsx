@@ -131,6 +131,9 @@ export default function Navbar() {
                     <Link to="/admin/payments" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Pembayaran SPP
                     </Link>
+                    <Link to="/admin/expenses" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Pengeluaran
+                    </Link>
                     <Link to="/admin/broadcast" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Kirim Pesan WA
                     </Link>
