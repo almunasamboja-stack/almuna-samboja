@@ -9,10 +9,35 @@ function formatRupiah(n) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
 }
 
+// Hilangkan karakter yang tidak boleh ada di nama file (Windows/Mac) & rapikan spasi berlebih
+function sanitizeFileName(str) {
+  return str.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
+}
+
 export default function PaymentReceiptModal({ payment, onClose }) {
   if (!payment) return null;
 
   const nomorNota = `SPP/${payment.periodYear}${String(payment.periodMonth).padStart(2, '0')}/${String(payment.id).padStart(4, '0')}`;
+
+  // Saat "Cetak / Simpan PDF" diklik, nama file PDF yang disarankan browser mengikuti judul halaman -
+  // jadi kita ganti sementara judul halaman jadi "Nama Siswa - Keterangan" sebelum print, lalu
+  // dikembalikan lagi ke judul semula setelah dialog print ditutup.
+  function handlePrint() {
+    const originalTitle = document.title;
+    const keterangan = payment.notes?.trim() || `SPP ${MONTHS[payment.periodMonth - 1]} ${payment.periodYear}`;
+    const namaSiswa = payment.student?.user?.name || 'Nota Pembayaran';
+    document.title = sanitizeFileName(`${namaSiswa} - ${keterangan}`);
+
+    function restoreTitle() {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', restoreTitle);
+    }
+    window.addEventListener('afterprint', restoreTitle);
+    // Jaga-jaga kalau event afterprint tidak terpicu di browser tertentu
+    setTimeout(restoreTitle, 5000);
+
+    window.print();
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto print:bg-white print:p-0">
@@ -84,7 +109,7 @@ export default function PaymentReceiptModal({ payment, onClose }) {
           <button onClick={onClose} className="flex-1 btn-outline">
             Tutup
           </button>
-          <button onClick={() => window.print()} className="flex-1 btn-primary">
+          <button onClick={handlePrint} className="flex-1 btn-primary">
             🖨️ Cetak / Simpan PDF
           </button>
         </div>
