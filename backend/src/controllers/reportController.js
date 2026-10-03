@@ -135,4 +135,106 @@ async function getClassRecap(req, res) {
   }
 }
 
-module.exports = { getClassRecap };
+const MONTH_NAMES_ID = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+// GET /api/reports/student-letters?courseId=X&month=M&year=Y
+// -> data untuk surat laporan formal per siswa dalam 1 kelas: nama lengkap, kelas, absensi,
+// rata-rata nilai ujian, pelanggaran, dan catatan guru (dari laporan Assessment bulan terkait).
+// Kalau month & year diisi, semua rekap (absensi/nilai ujian/pelanggaran) hanya dihitung dari bulan itu;
+// kalau tidak, rekap dihitung dari seluruh data siswa di kelas tersebut.
+async function getStudentLetterReport(req, res) {
+  try {
+    const { courseId, month, year } = req.query;
+
+    if (!courseId) {
+      return res.status(400).json({ message: 'Kelas wajib dipilih' });
+    }
+
+    let dateFilter;
+    let period = null;
+    if (month && year) {
+      const m = Number(month);
+      const y = Number(year);
+      const start = new Date(y, m - 1, 1);
+      const end = new Date(y, m, 1);
+      dateFilter = { gte: start, lt: end };
+      period = { month: m, year: y, label: `${MONTH_NAMES_ID[m - 1]} ${y}` };
+    }
+
+    const course = await prisma.course.findUnique({ where: { id: Number(courseId) } });
+    if (!course) {
+      return res.status(404).json({ message: 'Kelas tidak ditemukan' });
+    }
+
+    const students = await prisma.student.findMany({
+      where: {
+        status: 'APPROVED',
+        enrollments: { some: { courseId: Number(courseId) } },
+      },
+      include: {
+        user: { select: { name: true } },
+        attendances: {
+          select: { status: true },
+          where: { courseId: Number(courseId), ...(dateFilter ? { date: dateFilter } : {}) },
+        },
+        examAttempts: {
+          select: { score: true },
+          where: { exam: { courseId: Number(courseId) }, ...(dateFilter ? { submittedAt: dateFilter } : {}) },
+        },
+        violations: {
+          select: { date: true, notes: true, violationType: { select: { name: true } } },
+          where: { courseId: Number(courseId), ...(dateFilter ? { date: dateFilter } : {}) },
+          orderBy: { date: 'desc' },
+        },
+        assessments: {
+          where: {
+            courseId: Number(courseId),
+            ...(period ? { periodMonth: period.month, periodYear: period.year } : {}),
+          },
+          select: { notes: true, periodMonth: true, periodYear: true },
+          orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }],
+          take: 1,
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    const letters = students.map((s) => {
+      const present = s.attendances.filter((a) => a.status === 'PRESENT').length;
+      const sick = s.attendances.filter((a) => a.status === 'SICK').length;
+      const izin = s.attendances.filter((a) => a.status === 'IZIN').length;
+      const alpha = s.attendances.filter((a) => a.status === 'ALPHA').length;
+      const total = s.attendances.length;
+      const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+      const examAverage =
+        s.examAttempts.length > 0
+          ? Math.round((s.examAttempts.reduce((sum, a) => sum + a.score, 0) / s.examAttempts.length) * 10) / 10
+          : null;
+
+      return {
+        studentId: s.id,
+        name: s.user.name,
+        className: course.name,
+        attendance: { present, sick, izin, alpha, total, percentage },
+        examAverage,
+        violations: s.violations.map((v) => ({
+          date: v.date,
+          typeName: v.violationType.name,
+          notes: v.notes,
+        })),
+        teacherNote: s.assessments[0]?.notes || null,
+      };
+    });
+
+    res.json({ course: { id: course.id, name: course.name }, period, letters });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mengambil data surat laporan siswa' });
+  }
+}
+
+module.exports = { getClassRecap, getStudentLetterReport };

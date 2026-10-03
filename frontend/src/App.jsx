@@ -15,6 +15,7 @@ import BroadcastWA from './pages/BroadcastWA';
 import AssessmentManage from './pages/AssessmentManage';
 import ViolationsManage from './pages/ViolationsManage';
 import AdminExpenses from './pages/AdminExpenses';
+import StudentLetterReport from './pages/StudentLetterReport';
 import ExamsManage from './pages/ExamsManage';
 import ExamResultsRecap from './pages/ExamResultsRecap';
 import StudentExams from './pages/StudentExams';
@@ -197,6 +198,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminExpenses />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/student-letters"
+        element={
+          <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
+            <StudentLetterReport />
           </ProtectedRoute>
         }
       />
