@@ -22,7 +22,11 @@ async function getAvailableExams(req, res) {
     const exams = await prisma.exam.findMany({
       where: {
         isPublished: true,
-        OR: [{ courseId: null }, { courseId: { in: enrolledCourseIds } }],
+        AND: [
+          { OR: [{ courseId: null }, { courseId: { in: enrolledCourseIds } }] },
+          // Kalau ujian ini dikirim ke siswa tertentu saja (assignToAll = false), harus ada di daftar assignments
+          { OR: [{ assignToAll: true }, { assignments: { some: { studentId } } }] },
+        ],
       },
       include: {
         course: { select: { name: true } },
@@ -72,12 +76,18 @@ async function getExamToTake(req, res) {
         durationMinutes: true,
         isPublished: true,
         allowRetake: true,
+        assignToAll: true,
         course: { select: { name: true } },
+        assignments: { where: { studentId }, select: { id: true } },
       },
     });
 
     if (!exam || !exam.isPublished) {
       return res.status(404).json({ message: 'Ujian tidak ditemukan' });
+    }
+
+    if (!exam.assignToAll && exam.assignments.length === 0) {
+      return res.status(403).json({ message: 'Ujian ini tidak ditugaskan untuk Anda' });
     }
 
     if (!exam.allowRetake) {
@@ -87,7 +97,8 @@ async function getExamToTake(req, res) {
       }
     }
 
-    res.json({ exam });
+    const { assignments, ...examWithoutAssignments } = exam;
+    res.json({ exam: examWithoutAssignments });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Gagal mengambil detail ujian' });
@@ -105,10 +116,16 @@ async function submitExam(req, res) {
 
     const exam = await prisma.exam.findUnique({
       where: { id: Number(id) },
-      include: { answerKeys: true },
+      include: {
+        answerKeys: true,
+        assignments: { where: { studentId }, select: { id: true } },
+      },
     });
     if (!exam || !exam.isPublished) {
       return res.status(404).json({ message: 'Ujian tidak ditemukan' });
+    }
+    if (!exam.assignToAll && exam.assignments.length === 0) {
+      return res.status(403).json({ message: 'Ujian ini tidak ditugaskan untuk Anda' });
     }
     if (!Array.isArray(answers) || answers.length === 0) {
       return res.status(400).json({ message: 'Jawaban wajib diisi' });

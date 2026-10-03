@@ -5,6 +5,7 @@ const { listFilesInFolder } = require('../lib/googleDrive');
 const EXAM_INCLUDE_ADMIN = {
   course: { select: { id: true, name: true } },
   answerKeys: { orderBy: { questionNumber: 'asc' } },
+  assignments: { select: { studentId: true } },
   _count: { select: { attempts: true } },
 };
 
@@ -38,10 +39,12 @@ async function getAllExams(req, res) {
 }
 
 // POST /api/exams -> buat ujian baru (admin/guru)
-// body: { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys: [{questionNumber, correctAnswer}] }
+// body: { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes,
+//         answerKeys: [{questionNumber, correctAnswer}], allowRetake,
+//         assignToAll: boolean (default true), studentIds: [id,...] (dipakai kalau assignToAll = false) }
 async function createExam(req, res) {
   try {
-    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake } = req.body;
+    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake, assignToAll, studentIds } = req.body;
 
     if (!title || !driveFileId || !totalQuestions) {
       return res.status(400).json({ message: 'Judul, file soal, dan jumlah soal wajib diisi' });
@@ -54,6 +57,11 @@ async function createExam(req, res) {
       return res.status(400).json({ message: 'Kunci jawaban harus A, B, C, atau D' });
     }
 
+    const isAssignToAll = assignToAll === undefined ? true : !!assignToAll;
+    if (!isAssignToAll && (!Array.isArray(studentIds) || studentIds.length === 0)) {
+      return res.status(400).json({ message: 'Pilih minimal 1 siswa untuk mengirim ujian ke siswa tertentu' });
+    }
+
     const exam = await prisma.exam.create({
       data: {
         title,
@@ -64,12 +72,16 @@ async function createExam(req, res) {
         totalQuestions: Number(totalQuestions),
         durationMinutes: durationMinutes ? Number(durationMinutes) : null,
         allowRetake: allowRetake === undefined ? true : !!allowRetake,
+        assignToAll: isAssignToAll,
         answerKeys: {
           create: answerKeys.map((a) => ({
             questionNumber: Number(a.questionNumber),
             correctAnswer: a.correctAnswer,
           })),
         },
+        ...(!isAssignToAll
+          ? { assignments: { create: studentIds.map((sid) => ({ studentId: Number(sid) })) } }
+          : {}),
       },
       include: EXAM_INCLUDE_ADMIN,
     });
@@ -85,7 +97,7 @@ async function createExam(req, res) {
 async function updateExam(req, res) {
   try {
     const { id } = req.params;
-    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake } = req.body;
+    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake, assignToAll, studentIds } = req.body;
 
     const existing = await prisma.exam.findUnique({ where: { id: Number(id) } });
     if (!existing) {
@@ -107,6 +119,21 @@ async function updateExam(req, res) {
       });
     }
 
+    // Update daftar siswa yang ditugaskan (hanya kalau assignToAll ikut dikirim dari form)
+    if (assignToAll !== undefined) {
+      if (assignToAll) {
+        await prisma.examAssignment.deleteMany({ where: { examId: Number(id) } });
+      } else {
+        if (!Array.isArray(studentIds) || studentIds.length === 0) {
+          return res.status(400).json({ message: 'Pilih minimal 1 siswa untuk mengirim ujian ke siswa tertentu' });
+        }
+        await prisma.examAssignment.deleteMany({ where: { examId: Number(id) } });
+        await prisma.examAssignment.createMany({
+          data: studentIds.map((sid) => ({ examId: Number(id), studentId: Number(sid) })),
+        });
+      }
+    }
+
     const exam = await prisma.exam.update({
       where: { id: Number(id) },
       data: {
@@ -118,6 +145,7 @@ async function updateExam(req, res) {
         totalQuestions: totalQuestions !== undefined ? Number(totalQuestions) : existing.totalQuestions,
         durationMinutes: durationMinutes !== undefined ? (durationMinutes ? Number(durationMinutes) : null) : existing.durationMinutes,
         allowRetake: allowRetake !== undefined ? !!allowRetake : existing.allowRetake,
+        assignToAll: assignToAll !== undefined ? !!assignToAll : existing.assignToAll,
       },
       include: EXAM_INCLUDE_ADMIN,
     });

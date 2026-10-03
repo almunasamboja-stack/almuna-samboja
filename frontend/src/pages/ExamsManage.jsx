@@ -12,6 +12,7 @@ const EMPTY_FORM = {
   totalQuestions: 10,
   durationMinutes: '',
   allowRetake: true,
+  assignToAll: true,
 };
 
 const ANSWER_OPTIONS = ['A', 'B', 'C', 'D'];
@@ -26,6 +27,9 @@ export default function ExamsManage() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [answerKeys, setAnswerKeys] = useState([]); // [{questionNumber, correctAnswer}]
+  const [courseStudents, setCourseStudents] = useState([]); // siswa di kelas yang sedang dipilih di form
+  const [loadingCourseStudents, setLoadingCourseStudents] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
@@ -48,6 +52,21 @@ export default function ExamsManage() {
       setLoading(false);
     }
   }
+
+  // Muat ulang daftar siswa kelas setiap kali kelas yang dipilih di form berubah (dipakai untuk
+  // checklist "Siswa Tertentu"). Kalau belum pilih kelas, daftar dikosongkan.
+  useEffect(() => {
+    if (!modalOpen || !form.courseId) {
+      setCourseStudents([]);
+      return;
+    }
+    setLoadingCourseStudents(true);
+    api
+      .get(`/courses/${form.courseId}/students`)
+      .then(({ data }) => setCourseStudents(data.students))
+      .catch(() => setCourseStudents([]))
+      .finally(() => setLoadingCourseStudents(false));
+  }, [modalOpen, form.courseId]);
 
   async function loadDriveFiles() {
     setDriveError('');
@@ -72,6 +91,7 @@ export default function ExamsManage() {
     setEditingId(null);
     setForm(EMPTY_FORM);
     setAnswerKeys(buildEmptyAnswerKeys(10));
+    setSelectedStudentIds(new Set());
     setError('');
     setModalOpen(true);
   }
@@ -87,14 +107,25 @@ export default function ExamsManage() {
       totalQuestions: exam.totalQuestions,
       durationMinutes: exam.durationMinutes || '',
       allowRetake: exam.allowRetake !== undefined ? exam.allowRetake : true,
+      assignToAll: exam.assignToAll !== undefined ? exam.assignToAll : true,
     });
     setAnswerKeys(
       exam.answerKeys.length > 0
         ? exam.answerKeys.map((k) => ({ questionNumber: k.questionNumber, correctAnswer: k.correctAnswer }))
         : buildEmptyAnswerKeys(exam.totalQuestions)
     );
+    setSelectedStudentIds(new Set((exam.assignments || []).map((a) => a.studentId)));
     setError('');
     setModalOpen(true);
+  }
+
+  function toggleStudentSelected(studentId) {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(studentId)) next.delete(studentId);
+      else next.add(studentId);
+      return next;
+    });
   }
 
   function update(field, value) {
@@ -125,9 +156,19 @@ export default function ExamsManage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    if (!form.assignToAll && selectedStudentIds.size === 0) {
+      setError('Pilih minimal 1 siswa untuk mengirim ujian ke siswa tertentu, atau pilih "Semua Siswa".');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const payload = { ...form, answerKeys };
+      const payload = {
+        ...form,
+        answerKeys,
+        studentIds: form.assignToAll ? [] : Array.from(selectedStudentIds),
+      };
       if (editingId) {
         await api.put(`/exams/${editingId}`, payload);
         showToast('Ujian berhasil diperbarui.');
@@ -203,8 +244,11 @@ export default function ExamsManage() {
                 <p className="text-xs text-slate-400 mb-1">
                   {exam.totalQuestions} soal{exam.durationMinutes ? ` · ${exam.durationMinutes} menit` : ''} · File: {exam.driveFileName || exam.driveFileId}
                 </p>
-                <p className="text-xs text-slate-400 mb-3">
+                <p className="text-xs text-slate-400 mb-1">
                   {exam.allowRetake ? '🔁 Boleh dikerjakan berkali-kali' : '1️⃣ Hanya bisa dikerjakan sekali'}
+                </p>
+                <p className="text-xs text-slate-400 mb-3">
+                  {exam.assignToAll ? '👥 Dikirim ke semua siswa' : `🎯 Dikirim ke ${exam.assignments?.length ?? 0} siswa tertentu`}
                 </p>
                 <div className="flex flex-wrap gap-3 text-sm">
                   <button onClick={() => handleTogglePublish(exam)} className="text-navy font-medium hover:text-gold transition">
@@ -320,6 +364,58 @@ export default function ExamsManage() {
                     1️⃣ Hanya Sekali
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Kirim Ujian Ke</label>
+                <div className="flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => update('assignToAll', true)}
+                    className={`flex-1 text-sm font-medium px-4 py-2 rounded-lg border-2 transition ${
+                      form.assignToAll ? 'bg-navy border-navy text-white' : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
+                    }`}
+                  >
+                    👥 Semua Siswa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => update('assignToAll', false)}
+                    className={`flex-1 text-sm font-medium px-4 py-2 rounded-lg border-2 transition ${
+                      !form.assignToAll ? 'bg-navy border-navy text-white' : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
+                    }`}
+                  >
+                    🎯 Siswa Tertentu
+                  </button>
+                </div>
+
+                {!form.assignToAll && (
+                  <div className="border border-slate-200 rounded-lg p-3">
+                    {!form.courseId ? (
+                      <p className="text-xs text-slate-400">Pilih kelas terlebih dahulu untuk menampilkan daftar siswanya.</p>
+                    ) : loadingCourseStudents ? (
+                      <p className="text-xs text-slate-400">Memuat daftar siswa...</p>
+                    ) : courseStudents.length === 0 ? (
+                      <p className="text-xs text-slate-400">Belum ada siswa aktif di kelas ini.</p>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto space-y-1.5">
+                        {courseStudents.map((s) => (
+                          <label key={s.id} className="flex items-center gap-2 text-sm text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={selectedStudentIds.has(s.id)}
+                              onChange={() => toggleStudentSelected(s.id)}
+                            />
+                            {s.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                    {form.courseId && courseStudents.length > 0 && (
+                      <p className="text-xs text-slate-400 mt-2">{selectedStudentIds.size} siswa dipilih</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>

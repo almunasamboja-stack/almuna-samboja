@@ -51,6 +51,7 @@ model Student {
   examAttempts ExamAttempt[]
   assessments Assessment[]
   violations  Violation[]
+  examAssignments ExamAssignment[]
 
   createdAt   DateTime @default(now())
 
@@ -167,12 +168,30 @@ model Exam {
   durationMinutes Int?     // batas waktu pengerjaan (opsional, dalam menit)
   isPublished    Boolean   @default(false) // draft belum tampil ke siswa sampai dipublish
   allowRetake    Boolean   @default(true) // true = siswa boleh mengerjakan berkali-kali, false = hanya sekali
+  // true (default) = semua siswa di kelas ini (atau semua siswa kalau courseId kosong) bisa lihat & kerjakan.
+  // false = hanya siswa yang ada di daftar "assignments" di bawah yang bisa lihat & kerjakan ujian ini.
+  assignToAll    Boolean   @default(true)
   createdAt      DateTime  @default(now())
 
   answerKeys     ExamAnswerKey[]
   attempts       ExamAttempt[]
+  assignments    ExamAssignment[]
 
   @@map("exams")
+}
+
+// Daftar siswa tertentu yang ditunjuk untuk mengerjakan 1 ujian (dipakai saat Exam.assignToAll = false).
+// Satu baris = 1 ujian ditugaskan ke 1 siswa.
+model ExamAssignment {
+  id        Int      @id @default(autoincrement())
+  examId    Int
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId Int
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([examId, studentId])
+  @@map("exam_assignments")
 }
 
 // Kunci jawaban per nomor soal

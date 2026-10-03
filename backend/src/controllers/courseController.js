@@ -96,4 +96,26 @@ async function deleteCourse(req, res) {
   }
 }
 
-module.exports = { getCourses, createCourse, updateCourse, deleteCourse };
+// GET /api/courses/:id/students -> daftar siswa (sudah APPROVED) yang terdaftar di 1 kelas (guru/admin)
+// Dipakai misalnya untuk memilih siswa tertentu saat mengirim ujian hanya ke sebagian siswa.
+async function getCourseStudents(req, res) {
+  try {
+    const { id } = req.params;
+
+    const students = await prisma.student.findMany({
+      where: {
+        status: 'APPROVED',
+        enrollments: { some: { courseId: Number(id) } },
+      },
+      include: { user: { select: { name: true } } },
+      orderBy: { id: 'asc' },
+    });
+
+    res.json({ students: students.map((s) => ({ id: s.id, name: s.user.name })) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mengambil daftar siswa kelas' });
+  }
+}
+
+module.exports = { getCourses, createCourse, updateCourse, deleteCourse, getCourseStudents };
