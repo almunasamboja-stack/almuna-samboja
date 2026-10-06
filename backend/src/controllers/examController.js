@@ -313,6 +313,63 @@ async function getExamSummary(req, res) {
   }
 }
 
+// GET /api/exams/pending?courseId=X&examId=Y
+// -> daftar siswa yang BELUM mengerjakan ujian/tugas (hanya ujian yang sudah dipublikasikan).
+// Siswa yang dianggap wajib mengerjakan: siswa APPROVED di kelas ujian itu (atau semua siswa kalau ujian tidak
+// terikat kelas), dan kalau ujian dikirim ke siswa tertentu (assignToAll = false) hanya siswa yang ditunjuk.
+// Siswa yang sudah punya minimal 1 pengerjaan (kapan pun) tidak dihitung "belum mengerjakan" (admin/guru)
+async function getPendingExamStudents(req, res) {
+  try {
+    const { courseId, examId } = req.query;
+
+    const exams = await prisma.exam.findMany({
+      where: {
+        isPublished: true,
+        ...(courseId ? { courseId: Number(courseId) } : {}),
+        ...(examId ? { id: Number(examId) } : {}),
+      },
+      include: {
+        course: { select: { name: true } },
+        assignments: { select: { studentId: true } },
+        attempts: { select: { studentId: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const students = await prisma.student.findMany({
+      where: { status: 'APPROVED' },
+      include: {
+        user: { select: { name: true } },
+        enrollments: { select: { courseId: true } },
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    const pending = [];
+    exams.forEach((e) => {
+      const attemptedIds = new Set(e.attempts.map((a) => a.studentId));
+      const assignedIds = new Set(e.assignments.map((a) => a.studentId));
+      students.forEach((s) => {
+        if (e.courseId && !s.enrollments.some((en) => en.courseId === e.courseId)) return;
+        if (!e.assignToAll && !assignedIds.has(s.id)) return;
+        if (attemptedIds.has(s.id)) return;
+        pending.push({
+          studentId: s.id,
+          studentName: s.user.name,
+          examId: e.id,
+          examTitle: e.title,
+          courseName: e.course?.name || 'Semua Kelas',
+        });
+      });
+    });
+
+    res.json({ pending });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mengambil daftar siswa yang belum mengerjakan' });
+  }
+}
+
 // POST /api/exams/attempts -> catat nilai ujian secara manual (admin/guru), misal untuk ujian offline
 // body: { studentId, examId, score, correctCount, totalQuestions, submittedAt }
 async function createAttempt(req, res) {
@@ -409,6 +466,7 @@ module.exports = {
   getExamAttempts,
   getExamResultsRecap,
   getExamSummary,
+  getPendingExamStudents,
   createAttempt,
   updateAttempt,
   deleteAttempt,

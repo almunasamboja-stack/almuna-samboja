@@ -10,6 +10,7 @@ const {
   getExamAttempts,
   getExamResultsRecap,
   getExamSummary,
+  getPendingExamStudents,
   createAttempt,
   updateAttempt,
   deleteAttempt,
@@ -24,6 +25,9 @@ router.get('/drive-files', authMiddleware, requireRole('TEACHER', 'ADMIN'), getD
 
 // GET /api/exams/summary?courseId=X (admin/guru) - rata-rata nilai PER UJIAN yang diadakan
 router.get('/summary', authMiddleware, requireRole('TEACHER', 'ADMIN'), getExamSummary);
+
+// GET /api/exams/pending?courseId=X&examId=Y (admin/guru) - siswa yang belum mengerjakan
+router.get('/pending', authMiddleware, requireRole('TEACHER', 'ADMIN'), getPendingExamStudents);
 
 // GET /api/exams/results-recap?courseId=X (admin/guru) - rekap nilai per anak per pelajaran
 router.get('/results-recap', authMiddleware, requireRole('TEACHER', 'ADMIN'), getExamResultsRecap);

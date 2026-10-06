@@ -18,6 +18,8 @@ export default function ExamResultsRecap() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [attempts, setAttempts] = useState([]);
+  const [pending, setPending] = useState([]); // siswa yang belum mengerjakan
+  const [viewMode, setViewMode] = useState('DONE'); // 'DONE' = sudah mengerjakan, 'PENDING' = belum mengerjakan
   const [summary, setSummary] = useState([]);
   const [students, setStudents] = useState([]);
   const [exams, setExams] = useState([]);
@@ -60,12 +62,19 @@ export default function ExamResultsRecap() {
         ...(dateTo ? { dateTo } : {}),
       };
       const recapParams = { ...baseParams, ...(activeExamId !== 'ALL' ? { examId: activeExamId } : {}) };
-      const [{ data: recapData }, { data: summaryData }] = await Promise.all([
+      // daftar "belum mengerjakan" tidak ikut filter tanggal (tanggal itu hanya untuk waktu pengerjaan)
+      const pendingParams = {
+        ...(activeCourseId !== 'ALL' ? { courseId: activeCourseId } : {}),
+        ...(activeExamId !== 'ALL' ? { examId: activeExamId } : {}),
+      };
+      const [{ data: recapData }, { data: summaryData }, { data: pendingData }] = await Promise.all([
         api.get('/exams/results-recap', { params: recapParams }),
         api.get('/exams/summary', { params: baseParams }),
+        api.get('/exams/pending', { params: pendingParams }),
       ]);
       setAttempts(recapData.attempts);
       setSummary(summaryData.summary);
+      setPending(pendingData.pending);
     } catch (err) {
       console.error(err);
     } finally {
@@ -100,6 +109,10 @@ export default function ExamResultsRecap() {
   const filteredAttempts = attempts.filter((a) =>
     a.studentName.toLowerCase().includes(searchName.trim().toLowerCase())
   );
+
+  const filteredPending = pending
+    .filter((p) => p.studentName.toLowerCase().includes(searchName.trim().toLowerCase()))
+    .sort((a, b) => a.studentName.localeCompare(b.studentName) || a.examTitle.localeCompare(b.examTitle));
 
   const sortedAttempts = [...filteredAttempts].sort((a, b) => {
     let valA = a[sortBy];
@@ -190,7 +203,26 @@ export default function ExamResultsRecap() {
     }
   }
 
+  function handleDownloadPendingExcel() {
+    const rows = filteredPending.map((p) => ({
+      'Nama Siswa': p.studentName,
+      Pelajaran: p.courseName,
+      'Judul Ujian': p.examTitle,
+      Status: 'Belum mengerjakan',
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [{ wch: 22 }, { wch: 20 }, { wch: 26 }, { wch: 18 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Belum Mengerjakan');
+    const labelPelajaran = activeCourseId === 'ALL' ? 'Semua-Pelajaran' : (courses.find((c) => String(c.id) === activeCourseId)?.name || 'Pelajaran').replace(/\s+/g, '-');
+    XLSX.writeFile(workbook, `Belum-Mengerjakan-${labelPelajaran}.xlsx`);
+  }
+
   function handleDownloadExcel() {
+    if (viewMode === 'PENDING') {
+      handleDownloadPendingExcel();
+      return;
+    }
     const rows = sortedAttempts.map((a) => ({
       'Nama Siswa': a.studentName,
       Pelajaran: a.courseName,
@@ -230,7 +262,7 @@ export default function ExamResultsRecap() {
             <p className="text-slate-500 text-sm mt-1">Hasil ujian tiap siswa, difilter per pelajaran/kelas dan rentang tanggal pengerjaan.</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleDownloadExcel} disabled={attempts.length === 0} className="btn-outline disabled:opacity-50">
+            <button onClick={handleDownloadExcel} disabled={viewMode === 'PENDING' ? filteredPending.length === 0 : attempts.length === 0} className="btn-outline disabled:opacity-50">
               ⬇ Download Excel
             </button>
             <button onClick={openAddModal} className="btn-primary">
@@ -362,7 +394,62 @@ export default function ExamResultsRecap() {
               </div>
             )}
 
+            {/* PILIH TAMPILAN: sudah / belum mengerjakan */}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setViewMode('DONE')}
+                className={`text-sm font-medium px-4 py-2 rounded-lg border-2 transition ${
+                  viewMode === 'DONE' ? 'bg-navy border-navy text-white' : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
+                }`}
+              >
+                ✅ Sudah Mengerjakan ({filteredAttempts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('PENDING')}
+                className={`text-sm font-medium px-4 py-2 rounded-lg border-2 transition ${
+                  viewMode === 'PENDING' ? 'bg-navy border-navy text-white' : 'border-slate-200 text-slate-500 hover:border-navy hover:text-navy'
+                }`}
+              >
+                ⏳ Belum Mengerjakan ({filteredPending.length})
+              </button>
+            </div>
+
+            {viewMode === 'PENDING' && (
+              <div className="card overflow-x-auto">
+                <table className="w-full text-sm min-w-[560px]">
+                  <thead>
+                    <tr className="text-left text-slate-400 border-b border-slate-100">
+                      <th className="pb-3 font-medium">Nama Siswa</th>
+                      <th className="pb-3 font-medium">Pelajaran</th>
+                      <th className="pb-3 font-medium">Judul Ujian</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPending.map((p) => (
+                      <tr key={`${p.examId}-${p.studentId}`} className="border-b border-slate-50 last:border-0">
+                        <td className="py-3 font-medium text-navy">{p.studentName}</td>
+                        <td className="py-3 text-slate-500">{p.courseName}</td>
+                        <td className="py-3 text-slate-500">{p.examTitle}</td>
+                      </tr>
+                    ))}
+                    {filteredPending.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="py-6 text-center text-slate-400">
+                          {searchName
+                            ? `Tidak ada siswa bernama "${searchName}" yang belum mengerjakan.`
+                            : 'Semua siswa sudah mengerjakan ujian yang dipublikasikan.'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             {/* TABEL DETAIL PER PENGERJAAN - SORTABLE */}
+            {viewMode === 'DONE' && (
             <div className="card overflow-x-auto">
               <table className="w-full text-sm min-w-[820px]">
                 <thead>
@@ -425,6 +512,7 @@ export default function ExamResultsRecap() {
                 </tbody>
               </table>
             </div>
+            )}
           </>
         )}
       </main>

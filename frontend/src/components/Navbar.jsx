@@ -141,10 +141,10 @@ export default function Navbar() {
                       Kirim Pesan WA
                     </Link>
                     <Link to="/exams" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
-                      Ujian Online
+                      Tugas Online
                     </Link>
                     <Link to="/exam-results" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
-                      Rekap Nilai Ujian
+                      Rekap Nilai Tugas
                     </Link>
                     <Link to="/assessments" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Assessment
