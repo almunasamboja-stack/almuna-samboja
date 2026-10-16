@@ -199,6 +199,34 @@ async function getStudentData(req, res) {
       prisma.violationType.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     ]);
 
+    // Ujian/tugas yang tenggatnya SUDAH LEWAT dan tidak dikerjakan siswa ini -> dihitung nilai 0.
+    // Berlaku untuk ujian yang dipublikasikan di kelas yang diikuti siswa (atau ujian tanpa kelas),
+    // dan kalau ujian dikirim ke siswa tertentu, hanya jika siswa ini termasuk yang ditunjuk.
+    const enrolledCourseIds = student.enrollments.map((e) => e.course.id);
+    const expiredExams = await prisma.exam.findMany({
+      where: {
+        isPublished: true,
+        deadline: { lt: new Date() },
+        AND: [
+          { OR: [{ courseId: null }, { courseId: { in: enrolledCourseIds } }] },
+          { OR: [{ assignToAll: true }, { assignments: { some: { studentId } } }] },
+        ],
+      },
+      include: {
+        course: { select: { name: true } },
+        attempts: { where: { studentId }, select: { id: true } },
+      },
+      orderBy: { deadline: 'desc' },
+    });
+    const missedExams = expiredExams
+      .filter((e) => e.attempts.length === 0)
+      .map((e) => ({
+        examId: e.id,
+        title: e.title,
+        courseName: e.course?.name || 'Semua Kelas',
+        deadline: e.deadline,
+      }));
+
     res.json({
       student: {
         id: student.id,
@@ -208,6 +236,7 @@ async function getStudentData(req, res) {
       },
       grades,
       examAttempts,
+      missedExams,
       attendances,
       violations,
       payments,

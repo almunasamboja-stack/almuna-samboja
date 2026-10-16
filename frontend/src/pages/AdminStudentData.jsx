@@ -2,6 +2,7 @@
 // nilai ujian/tugas, absensi, pelanggaran, pembayaran SPP, dan penilaian bulanan.
 import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
+import StudentProgressSummary from '../components/StudentProgressSummary';
 import api from '../api/axios';
 
 const MONTHS = [
@@ -51,7 +52,7 @@ const SECTIONS = [
       { label: 'Ujian/Tugas', render: (r) => r.exam?.title },
       { label: 'Pelajaran', render: (r) => r.exam?.course?.name || 'Semua Kelas' },
       { label: 'Nilai', render: (r) => <span className="font-semibold text-navy">{r.score}</span> },
-      { label: 'Benar', render: (r) => `${r.correctCount}/${r.totalQuestions}` },
+      { label: 'Benar', render: (r) => (r.virtual ? <span className="text-maroon">Tidak dikerjakan (tenggat lewat)</span> : `${r.correctCount}/${r.totalQuestions}`) },
     ],
     fields: [
       { key: 'score', label: 'Nilai (0-100)', type: 'number', min: 0, max: 100, step: 'any', required: true },
@@ -202,7 +203,22 @@ export default function AdminStudentData() {
   });
 
   const activeSection = SECTIONS.find((s) => s.key === activeKey);
-  const rows = data ? data[activeSection.dataKey] : [];
+
+  // Daftar baris per bagian. Khusus ujian/tugas: ujian yang lewat tenggat & tidak dikerjakan ditampilkan
+  // sebagai baris otomatis bernilai 0 (baris virtual, tidak ada di database sehingga tidak bisa diedit/dihapus).
+  function getRows(section) {
+    if (!data) return [];
+    if (section.key !== 'examAttempts') return data[section.dataKey];
+    const virtualRows = (data.missedExams || []).map((m) => ({
+      id: `missed-${m.examId}`,
+      virtual: true,
+      exam: { title: m.title, course: { name: m.courseName } },
+      score: 0,
+      submittedAt: m.deadline,
+    }));
+    return [...data.examAttempts, ...virtualRows].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  }
+  const rows = getRows(activeSection);
 
   function openEdit(section, record) {
     setEditing({ section, record });
@@ -326,6 +342,8 @@ export default function AdminStudentData() {
                   </p>
                 </div>
 
+                <StudentProgressSummary data={data} />
+
                 <div className="flex flex-wrap gap-2 mb-4 border-b border-slate-200">
                   {SECTIONS.map((s) => (
                     <button
@@ -335,7 +353,7 @@ export default function AdminStudentData() {
                         activeKey === s.key ? 'border-gold text-navy' : 'border-transparent text-slate-400 hover:text-slate-600'
                       }`}
                     >
-                      {s.label} ({data[s.dataKey].length})
+                      {s.label} ({getRows(s).length})
                     </button>
                   ))}
                 </div>
@@ -357,10 +375,13 @@ export default function AdminStudentData() {
                             <td key={c.label} className="py-3 text-slate-600">{c.render(r)}</td>
                           ))}
                           <td className="py-3 text-right space-x-2 whitespace-nowrap">
-                            <button onClick={() => openEdit(activeSection, r)} className="text-navy font-medium hover:text-gold transition">
-                              Edit
-                            </button>
-                            {confirmDelete === `${activeSection.endpoint}-${r.id}` ? (
+                            {r.virtual && <span className="text-xs text-slate-400">Otomatis 0</span>}
+                            {!r.virtual && (
+                              <button onClick={() => openEdit(activeSection, r)} className="text-navy font-medium hover:text-gold transition">
+                                Edit
+                              </button>
+                            )}
+                            {r.virtual ? null : confirmDelete === `${activeSection.endpoint}-${r.id}` ? (
                               <>
                                 <button onClick={() => handleDelete(activeSection, r)} className="text-maroon font-semibold">Yakin?</button>
                                 <button onClick={() => setConfirmDelete(null)} className="text-slate-400">Batal</button>
