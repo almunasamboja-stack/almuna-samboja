@@ -34,6 +34,7 @@ export default function AdminPayments() {
   const [periodMonth, setPeriodMonth] = useState(now.getMonth() + 1);
   const [periodYear, setPeriodYear] = useState(now.getFullYear());
   const [modalOpen, setModalOpen] = useState(false);
+  const [studentSearch, setStudentSearch] = useState(''); // pencarian nama siswa di form pembayaran
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
@@ -75,6 +76,7 @@ export default function AdminPayments() {
   function openAddModal() {
     setEditingId(null);
     setForm({ ...EMPTY_FORM, periodMonth, periodYear });
+    setStudentSearch('');
     setError('');
     setModalOpen(true);
   }
@@ -98,6 +100,14 @@ export default function AdminPayments() {
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  // Daftar siswa di dropdown difilter sesuai kata kunci pencarian; siswa yang sudah terpilih
+  // tetap ditampilkan supaya pilihannya tidak hilang saat kata kunci diubah.
+  const filteredStudents = students.filter(
+    (s) =>
+      String(s.id) === String(form.studentId) ||
+      s.user.name.toLowerCase().includes(studentSearch.trim().toLowerCase())
+  );
 
   // Ambil daftar kelas milik siswa yang sedang dipilih, untuk dropdown kelas & auto-isi nominal
   const selectedStudent = students.find((s) => String(s.id) === String(form.studentId));
@@ -294,6 +304,15 @@ export default function AdminPayments() {
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1">Siswa</label>
+                {!editingId && (
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="🔍 Cari nama siswa..."
+                    className="input-field mb-2"
+                  />
+                )}
                 <select
                   required
                   disabled={!!editingId}
@@ -302,10 +321,13 @@ export default function AdminPayments() {
                   onChange={(e) => update('studentId', e.target.value)}
                 >
                   <option value="">-- Pilih siswa --</option>
-                  {students.map((s) => (
+                  {filteredStudents.map((s) => (
                     <option key={s.id} value={s.id}>{s.user.name}</option>
                   ))}
                 </select>
+                {!editingId && studentSearch.trim() && filteredStudents.length === 0 && (
+                  <p className="text-xs text-slate-400 mt-1">Tidak ada siswa bernama "{studentSearch}".</p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 block mb-1">Kelas (opsional)</label>

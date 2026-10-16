@@ -171,6 +171,9 @@ model Exam {
   // true (default) = semua siswa di kelas ini (atau semua siswa kalau courseId kosong) bisa lihat & kerjakan.
   // false = hanya siswa yang ada di daftar "assignments" di bawah yang bisa lihat & kerjakan ujian ini.
   assignToAll    Boolean   @default(true)
+  // Batas waktu pengumpulan (tenggat). Setelah lewat, siswa tidak bisa membuka/mengerjakan ujian ini lagi.
+  // null = tanpa batas waktu.
+  deadline       DateTime?
   createdAt      DateTime  @default(now())
 
   answerKeys     ExamAnswerKey[]

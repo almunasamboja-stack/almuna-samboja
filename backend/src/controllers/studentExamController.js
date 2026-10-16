@@ -43,8 +43,11 @@ async function getAvailableExams(req, res) {
       totalQuestions: e.totalQuestions,
       durationMinutes: e.durationMinutes,
       allowRetake: e.allowRetake,
-      // Sudah pernah dikerjakan & ujian ini hanya boleh 1x -> tidak bisa dikerjakan lagi
-      canTake: e.allowRetake || e.attempts.length === 0,
+      deadline: e.deadline,
+      // Tenggat sudah lewat -> tidak bisa dikerjakan lagi
+      isExpired: !!e.deadline && new Date() > e.deadline,
+      // Sudah pernah dikerjakan & ujian ini hanya boleh 1x, atau tenggat sudah lewat -> tidak bisa dikerjakan
+      canTake: (e.allowRetake || e.attempts.length === 0) && !(e.deadline && new Date() > e.deadline),
       lastAttempt: e.attempts[0]
         ? { score: e.attempts[0].score, submittedAt: e.attempts[0].submittedAt }
         : null,
@@ -77,6 +80,7 @@ async function getExamToTake(req, res) {
         isPublished: true,
         allowRetake: true,
         assignToAll: true,
+        deadline: true,
         course: { select: { name: true } },
         assignments: { where: { studentId }, select: { id: true } },
       },
@@ -88,6 +92,10 @@ async function getExamToTake(req, res) {
 
     if (!exam.assignToAll && exam.assignments.length === 0) {
       return res.status(403).json({ message: 'Ujian ini tidak ditugaskan untuk Anda' });
+    }
+
+    if (exam.deadline && new Date() > exam.deadline) {
+      return res.status(403).json({ message: 'Batas waktu pengerjaan ujian ini sudah berakhir.' });
     }
 
     if (!exam.allowRetake) {
@@ -126,6 +134,9 @@ async function submitExam(req, res) {
     }
     if (!exam.assignToAll && exam.assignments.length === 0) {
       return res.status(403).json({ message: 'Ujian ini tidak ditugaskan untuk Anda' });
+    }
+    if (exam.deadline && new Date() > exam.deadline) {
+      return res.status(403).json({ message: 'Batas waktu pengerjaan ujian ini sudah berakhir, jawaban tidak dapat dikirim.' });
     }
     if (!Array.isArray(answers) || answers.length === 0) {
       return res.status(400).json({ message: 'Jawaban wajib diisi' });

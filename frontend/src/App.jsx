@@ -16,6 +16,7 @@ import AssessmentManage from './pages/AssessmentManage';
 import ViolationsManage from './pages/ViolationsManage';
 import AdminExpenses from './pages/AdminExpenses';
 import StudentLetterReport from './pages/StudentLetterReport';
+import AdminStudentData from './pages/AdminStudentData';
 import ExamsManage from './pages/ExamsManage';
 import ExamResultsRecap from './pages/ExamResultsRecap';
 import StudentExams from './pages/StudentExams';
@@ -198,6 +199,15 @@ export default function App() {
         element={
           <ProtectedRoute allowedRoles={['ADMIN']}>
             <AdminExpenses />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/student-data"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminStudentData />
           </ProtectedRoute>
         }
       />

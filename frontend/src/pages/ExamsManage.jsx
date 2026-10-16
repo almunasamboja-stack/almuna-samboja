@@ -13,7 +13,28 @@ const EMPTY_FORM = {
   durationMinutes: '',
   allowRetake: true,
   assignToAll: true,
+  deadlineMode: 'NONE', // 'NONE' | '24' | '48' | '72' | '168' (jam sejak tugas dibuat) | 'CUSTOM'
+  deadlineCustom: '', // format datetime-local, dipakai kalau deadlineMode = 'CUSTOM'
 };
+
+const DEADLINE_OPTIONS = [
+  { value: 'NONE', label: 'Tanpa batas waktu' },
+  { value: '24', label: '24 jam sejak tugas dibuat' },
+  { value: '48', label: '48 jam sejak tugas dibuat' },
+  { value: '72', label: '3 hari sejak tugas dibuat' },
+  { value: '168', label: '7 hari sejak tugas dibuat' },
+  { value: 'CUSTOM', label: 'Atur tanggal & jam sendiri' },
+];
+
+// Date -> string untuk <input type="datetime-local"> (waktu lokal)
+function toLocalInput(date) {
+  const d = new Date(date);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function formatDeadline(date) {
+  return new Date(date).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 const ANSWER_OPTIONS = ['A', 'B', 'C', 'D'];
 
@@ -25,6 +46,7 @@ export default function ExamsManage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [editingCreatedAt, setEditingCreatedAt] = useState(null); // acuan hitung tenggat "X jam sejak dibuat" saat edit
   const [form, setForm] = useState(EMPTY_FORM);
   const [answerKeys, setAnswerKeys] = useState([]); // [{questionNumber, correctAnswer}]
   const [courseStudents, setCourseStudents] = useState([]); // siswa di kelas yang sedang dipilih di form
@@ -89,6 +111,7 @@ export default function ExamsManage() {
 
   function openAddModal() {
     setEditingId(null);
+    setEditingCreatedAt(null);
     setForm(EMPTY_FORM);
     setAnswerKeys(buildEmptyAnswerKeys(10));
     setSelectedStudentIds(new Set());
@@ -98,6 +121,7 @@ export default function ExamsManage() {
 
   function openEditModal(exam) {
     setEditingId(exam.id);
+    setEditingCreatedAt(exam.createdAt);
     setForm({
       title: exam.title,
       description: exam.description || '',
@@ -108,6 +132,8 @@ export default function ExamsManage() {
       durationMinutes: exam.durationMinutes || '',
       allowRetake: exam.allowRetake !== undefined ? exam.allowRetake : true,
       assignToAll: exam.assignToAll !== undefined ? exam.assignToAll : true,
+      deadlineMode: exam.deadline ? 'CUSTOM' : 'NONE',
+      deadlineCustom: exam.deadline ? toLocalInput(exam.deadline) : '',
     });
     setAnswerKeys(
       exam.answerKeys.length > 0
@@ -162,10 +188,25 @@ export default function ExamsManage() {
       return;
     }
 
+    // Hitung tenggat: preset jam dihitung dari waktu tugas dibuat (atau sekarang kalau tugas baru)
+    let deadline = null;
+    if (form.deadlineMode === 'CUSTOM') {
+      if (!form.deadlineCustom) {
+        setError('Isi tanggal & jam batas waktu, atau pilih "Tanpa batas waktu".');
+        return;
+      }
+      deadline = new Date(form.deadlineCustom).toISOString();
+    } else if (form.deadlineMode !== 'NONE') {
+      const base = editingCreatedAt ? new Date(editingCreatedAt) : new Date();
+      deadline = new Date(base.getTime() + Number(form.deadlineMode) * 3600 * 1000).toISOString();
+    }
+
     setSubmitting(true);
     try {
+      const { deadlineMode, deadlineCustom, ...formFields } = form;
       const payload = {
-        ...form,
+        ...formFields,
+        deadline,
         answerKeys,
         studentIds: form.assignToAll ? [] : Array.from(selectedStudentIds),
       };
@@ -247,6 +288,11 @@ export default function ExamsManage() {
                 <p className="text-xs text-slate-400 mb-1">
                   {exam.allowRetake ? '🔁 Boleh dikerjakan berkali-kali' : '1️⃣ Hanya bisa dikerjakan sekali'}
                 </p>
+                {exam.deadline && (
+                  <p className={`text-xs mb-1 ${new Date() > new Date(exam.deadline) ? 'text-maroon font-medium' : 'text-slate-400'}`}>
+                    ⏰ Tenggat: {formatDeadline(exam.deadline)}{new Date() > new Date(exam.deadline) ? ' (sudah lewat)' : ''}
+                  </p>
+                )}
                 <p className="text-xs text-slate-400 mb-3">
                   {exam.assignToAll ? '👥 Dikirim ke semua siswa' : `🎯 Dikirim ke ${exam.assignments?.length ?? 0} siswa tertentu`}
                 </p>
@@ -364,6 +410,29 @@ export default function ExamsManage() {
                     1️⃣ Hanya Sekali
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Batas Waktu Pengerjaan (Tenggat)</label>
+                <select className="input-field" value={form.deadlineMode} onChange={(e) => update('deadlineMode', e.target.value)}>
+                  {DEADLINE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                {form.deadlineMode === 'CUSTOM' && (
+                  <input
+                    type="datetime-local"
+                    className="input-field mt-2"
+                    value={form.deadlineCustom}
+                    onChange={(e) => update('deadlineCustom', e.target.value)}
+                  />
+                )}
+                {form.deadlineMode !== 'NONE' && form.deadlineMode !== 'CUSTOM' && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Tenggat: {formatDeadline(new Date((editingCreatedAt ? new Date(editingCreatedAt) : new Date()).getTime() + Number(form.deadlineMode) * 3600 * 1000))}
+                  </p>
+                )}
+                <p className="text-xs text-slate-400 mt-1">Setelah tenggat lewat, siswa tidak bisa lagi membuka atau mengirim jawaban ujian ini.</p>
               </div>
 
               <div>

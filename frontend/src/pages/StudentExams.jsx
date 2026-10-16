@@ -91,6 +91,13 @@ export default function StudentExams() {
                     {exam.totalQuestions} soal{exam.durationMinutes ? ` · ${exam.durationMinutes} menit` : ' · Tanpa batas waktu'}
                   </p>
 
+                  {exam.deadline && (
+                    <p className={`text-xs mb-4 -mt-2 ${exam.isExpired ? 'text-maroon font-medium' : 'text-slate-500'}`}>
+                      ⏰ Batas pengerjaan: {new Date(exam.deadline).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {exam.isExpired ? ' (sudah berakhir)' : ''}
+                    </p>
+                  )}
+
                   {exam.lastAttempt && (
                     <div className="bg-surface rounded-lg px-3 py-2 mb-4 text-xs">
                       <p className="text-slate-500">Nilai terakhir Anda:</p>
@@ -102,6 +109,13 @@ export default function StudentExams() {
                     <Link to={`/student-exams/${exam.id}`} className="btn-primary text-center mt-auto">
                       {exam.lastAttempt ? 'Kerjakan Lagi' : 'Kerjakan Ujian'}
                     </Link>
+                  ) : exam.isExpired ? (
+                    <div className="text-center mt-auto">
+                      <button disabled className="btn-primary opacity-50 cursor-not-allowed w-full">
+                        Waktu Pengerjaan Berakhir
+                      </button>
+                      <p className="text-xs text-slate-400 mt-1.5">Batas waktu pengerjaan ujian ini sudah lewat.</p>
+                    </div>
                   ) : (
                     <div className="text-center mt-auto">
                       <button disabled className="btn-primary opacity-50 cursor-not-allowed w-full">

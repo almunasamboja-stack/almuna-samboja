@@ -119,6 +119,9 @@ export default function Navbar() {
                     <Link to="/admin/students" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Kelola Siswa
                     </Link>
+                    <Link to="/admin/student-data" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
+                      Data & Nilai Siswa
+                    </Link>
                     <Link to="/admin/courses" className="block px-4 py-2 text-sm text-navy hover:bg-surface">
                       Kelola Kursus
                     </Link>

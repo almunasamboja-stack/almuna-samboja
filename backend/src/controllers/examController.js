@@ -44,7 +44,7 @@ async function getAllExams(req, res) {
 //         assignToAll: boolean (default true), studentIds: [id,...] (dipakai kalau assignToAll = false) }
 async function createExam(req, res) {
   try {
-    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake, assignToAll, studentIds } = req.body;
+    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake, assignToAll, studentIds, deadline } = req.body;
 
     if (!title || !driveFileId || !totalQuestions) {
       return res.status(400).json({ message: 'Judul, file soal, dan jumlah soal wajib diisi' });
@@ -73,6 +73,7 @@ async function createExam(req, res) {
         durationMinutes: durationMinutes ? Number(durationMinutes) : null,
         allowRetake: allowRetake === undefined ? true : !!allowRetake,
         assignToAll: isAssignToAll,
+        deadline: deadline ? new Date(deadline) : null,
         answerKeys: {
           create: answerKeys.map((a) => ({
             questionNumber: Number(a.questionNumber),
@@ -97,7 +98,7 @@ async function createExam(req, res) {
 async function updateExam(req, res) {
   try {
     const { id } = req.params;
-    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake, assignToAll, studentIds } = req.body;
+    const { title, description, driveFileId, driveFileName, courseId, totalQuestions, durationMinutes, answerKeys, allowRetake, assignToAll, studentIds, deadline } = req.body;
 
     const existing = await prisma.exam.findUnique({ where: { id: Number(id) } });
     if (!existing) {
@@ -146,6 +147,7 @@ async function updateExam(req, res) {
         durationMinutes: durationMinutes !== undefined ? (durationMinutes ? Number(durationMinutes) : null) : existing.durationMinutes,
         allowRetake: allowRetake !== undefined ? !!allowRetake : existing.allowRetake,
         assignToAll: assignToAll !== undefined ? !!assignToAll : existing.assignToAll,
+        deadline: deadline !== undefined ? (deadline ? new Date(deadline) : null) : existing.deadline,
       },
       include: EXAM_INCLUDE_ADMIN,
     });
