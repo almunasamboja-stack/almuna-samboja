@@ -155,6 +155,35 @@ const TYPES = {
   },
 };
 
+// Ujian/tugas yang tenggatnya SUDAH LEWAT dan tidak dikerjakan siswa ini -> dihitung nilai 0.
+// Berlaku untuk ujian yang dipublikasikan di kelas yang diikuti siswa (atau ujian tanpa kelas),
+// dan kalau ujian dikirim ke siswa tertentu, hanya jika siswa ini termasuk yang ditunjuk.
+async function findMissedExams(studentId, enrolledCourseIds) {
+  const expiredExams = await prisma.exam.findMany({
+    where: {
+      isPublished: true,
+      deadline: { lt: new Date() },
+      AND: [
+        { OR: [{ courseId: null }, { courseId: { in: enrolledCourseIds } }] },
+        { OR: [{ assignToAll: true }, { assignments: { some: { studentId } } }] },
+      ],
+    },
+    include: {
+      course: { select: { name: true } },
+      attempts: { where: { studentId }, select: { id: true } },
+    },
+    orderBy: { deadline: 'desc' },
+  });
+  return expiredExams
+    .filter((e) => e.attempts.length === 0)
+    .map((e) => ({
+      examId: e.id,
+      title: e.title,
+      courseName: e.course?.name || 'Semua Kelas',
+      deadline: e.deadline,
+    }));
+}
+
 // GET /api/student-data/:studentId -> semua catatan yang terkait 1 siswa
 async function getStudentData(req, res) {
   try {
@@ -199,33 +228,7 @@ async function getStudentData(req, res) {
       prisma.violationType.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     ]);
 
-    // Ujian/tugas yang tenggatnya SUDAH LEWAT dan tidak dikerjakan siswa ini -> dihitung nilai 0.
-    // Berlaku untuk ujian yang dipublikasikan di kelas yang diikuti siswa (atau ujian tanpa kelas),
-    // dan kalau ujian dikirim ke siswa tertentu, hanya jika siswa ini termasuk yang ditunjuk.
-    const enrolledCourseIds = student.enrollments.map((e) => e.course.id);
-    const expiredExams = await prisma.exam.findMany({
-      where: {
-        isPublished: true,
-        deadline: { lt: new Date() },
-        AND: [
-          { OR: [{ courseId: null }, { courseId: { in: enrolledCourseIds } }] },
-          { OR: [{ assignToAll: true }, { assignments: { some: { studentId } } }] },
-        ],
-      },
-      include: {
-        course: { select: { name: true } },
-        attempts: { where: { studentId }, select: { id: true } },
-      },
-      orderBy: { deadline: 'desc' },
-    });
-    const missedExams = expiredExams
-      .filter((e) => e.attempts.length === 0)
-      .map((e) => ({
-        examId: e.id,
-        title: e.title,
-        courseName: e.course?.name || 'Semua Kelas',
-        deadline: e.deadline,
-      }));
+    const missedExams = await findMissedExams(studentId, student.enrollments.map((e) => e.course.id));
 
     res.json({
       student: {
@@ -246,6 +249,35 @@ async function getStudentData(req, res) {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Gagal mengambil data siswa' });
+  }
+}
+
+// GET /api/student-data/me -> data untuk grafik & rata-rata milik siswa yang sedang login
+// (nilai harian/bulanan, ujian/tugas termasuk yang terlewat tenggat, absensi). Hanya data milik sendiri.
+async function getMyProgress(req, res) {
+  try {
+    const student = await prisma.student.findUnique({
+      where: { userId: req.user.id },
+      include: { enrollments: { select: { courseId: true } } },
+    });
+    if (!student) return res.status(404).json({ message: 'Profil siswa tidak ditemukan' });
+    const studentId = student.id;
+
+    const [grades, examAttempts, attendances, missedExams] = await Promise.all([
+      prisma.grade.findMany({ where: { studentId }, orderBy: { date: 'desc' } }),
+      prisma.examAttempt.findMany({
+        where: { studentId },
+        include: { exam: { select: { title: true } } },
+        orderBy: { submittedAt: 'desc' },
+      }),
+      prisma.attendance.findMany({ where: { studentId }, orderBy: { date: 'desc' } }),
+      findMissedExams(studentId, student.enrollments.map((e) => e.courseId)),
+    ]);
+
+    res.json({ grades, examAttempts, attendances, missedExams });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Gagal mengambil data perkembangan' });
   }
 }
 
@@ -288,4 +320,4 @@ async function deleteRecord(req, res) {
   }
 }
 
-module.exports = { getStudentData, updateRecord, deleteRecord };
+module.exports = { getStudentData, getMyProgress, updateRecord, deleteRecord };

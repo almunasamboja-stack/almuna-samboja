@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import GradeChart from '../components/GradeChart';
 import AssessmentChart from '../components/AssessmentChart';
+import StudentProgressSummary from '../components/StudentProgressSummary';
 import PaymentReceiptModal from '../components/PaymentReceiptModal';
 import AvatarManager from '../components/AvatarManager';
 import ChangePasswordForm from '../components/ChangePasswordForm';
@@ -36,6 +37,8 @@ export default function StudentDashboard() {
   const [payments, setPayments] = useState(null);
   const [assessments, setAssessments] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(null); // data rata-rata & grafik perkembangan (tab Grafik)
+  const [progressError, setProgressError] = useState('');
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -68,6 +71,16 @@ export default function StudentDashboard() {
       setLoadingAttendance(false);
     }
   }
+
+  // Data grafik dimuat saat tab "Grafik" pertama kali dibuka (terpisah supaya tab lain tidak terganggu kalau gagal)
+  useEffect(() => {
+    if (tab !== 'grafik' || progress || !profile || profile.status !== 'APPROVED') return;
+    setProgressError('');
+    api
+      .get('/student-data/me')
+      .then(({ data }) => setProgress(data))
+      .catch((err) => setProgressError(err.response?.data?.message || 'Gagal memuat grafik perkembangan'));
+  }, [tab, progress, profile]);
 
   async function load() {
     try {
@@ -173,6 +186,7 @@ export default function StudentDashboard() {
                 { key: 'profil', label: 'Profil Saya' },
                 { key: 'absensi', label: 'Rekap Absensi' },
                 { key: 'nilai', label: 'Nilai' },
+                { key: 'grafik', label: 'Grafik Perkembangan' },
                 { key: 'spp', label: 'Riwayat SPP' },
                 { key: 'assessment', label: 'Assessment' },
               ].map((t) => (
@@ -360,6 +374,15 @@ export default function StudentDashboard() {
             )}
 
             {/* TAB 3: NILAI */}
+            {/* TAB: GRAFIK PERKEMBANGAN - rata-rata & grafik garis ujian/tugas, nilai harian/bulanan, absensi */}
+            {tab === 'grafik' && (
+              <>
+                {progressError && <div className="bg-red-50 text-maroon text-sm rounded-lg px-4 py-2.5 mb-4">{progressError}</div>}
+                {!progress && !progressError && <p className="text-slate-400">Memuat grafik...</p>}
+                {progress && <StudentProgressSummary data={progress} />}
+              </>
+            )}
+
             {tab === 'nilai' && (
               grades ? (
                 <div className="space-y-6">

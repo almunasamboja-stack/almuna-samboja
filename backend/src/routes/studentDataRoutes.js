@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const { getStudentData, updateRecord, deleteRecord } = require('../controllers/studentDataController');
-const { authMiddleware, requireRole } = require('../middleware/auth');
+const { getStudentData, getMyProgress, updateRecord, deleteRecord } = require('../controllers/studentDataController');
+const { authMiddleware, requireRole, requireApprovedStudent } = require('../middleware/auth');
 
-// Semua rute di sini KHUSUS admin: lihat / edit / hapus semua data yang terkait 1 siswa.
+// Rute /me untuk siswa (hanya data miliknya sendiri). Rute lainnya KHUSUS admin: lihat / edit / hapus semua data yang terkait 1 siswa.
 // :type = grades | attendances | violations | payments | assessments | exam-attempts
 
-// GET /api/student-data/:studentId
+// GET /api/student-data/me -> data grafik milik siswa yang login (HARUS di atas rute /:studentId)
+router.get('/me', authMiddleware, requireRole('STUDENT'), requireApprovedStudent, getMyProgress);
+
+// GET /api/student-data/:studentId (admin)
 router.get('/:studentId', authMiddleware, requireRole('ADMIN'), getStudentData);
 
 // PUT /api/student-data/:type/:id
